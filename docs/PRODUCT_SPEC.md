@@ -11,20 +11,28 @@ Knowledge Workspace is a research-focused reading and retrieval environment for 
 - Keep the product clearly labelled as a demo so future AI features are not misrepresented as already working.
 - Prepare the UI for future Supabase integration, document ingestion, embeddings, and document-grounded question answering.
 
+## Current ingestion scope
+
+- Upload PDFs from the Library and convert them through the Docling Serve HTTP API via FastAPI.
+- Show actual queued, processing, completed and failed job states and expose returned Markdown and structured content.
+- Preserve headings and source-page provenance when Docling provides it.
+- Keep job and document records in process memory for this local milestone; no durable storage is promised.
+
 ## Core user flows
 
 1. Open the library to browse documents and upload a new file.
 2. Read content in a structured document viewer with a table of contents and contextual assistant panel.
 3. Search across sample materials using natural-language queries and filter by document type.
-4. Capture notes in a Markdown editor with preview.
+4. Capture notes in the BlockNote rich-text editor.
 5. Sign in or register in a layout prepared for future auth integration.
 6. Adjust workspace preferences without leaving the core reading flow.
 
-## Non-goals for this milestone
+## Current non-goals
 
-- Real PDF parsing or OCR.
+- Durable document storage or cross-session persistence.
 - Real semantic search or vector retrieval.
 - Real auth, database storage or file hosting.
 - Real assistant chat or document-grounded model inference.
+- A separate handwritten-OCR pipeline.
 
-The current implementation intentionally uses demonstration data and clearly labelled placeholders.
+Screens other than the Library ingestion flow still use demonstration data and clearly labelled placeholders.

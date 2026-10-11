@@ -8,6 +8,12 @@ node_modules
 /.vite
 *.tsbuildinfo
 
+# Python backend
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
 # Logs
 logs
 *.log
@@ -21,6 +27,8 @@ lerna-debug.log*
 .env
 .env.*
 *.local
+!.env.example
+!backend/.env.example
 
 # Editor and OS artifacts
 .vscode/*

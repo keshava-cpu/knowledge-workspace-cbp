@@ -1,12 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Search, Sparkles } from 'lucide-react'
+import { useSearchParams } from 'react-router'
 import { Button } from '../../components/ui/button'
 import { searchResults } from '../data/sample-data'
 
 const filters = ['All', 'Textbook', 'Research paper', 'Lecture notes'] as const
 
 export function SearchPage() {
-  const [query, setQuery] = useState('How does memory retrieval depend on context?')
+  const [searchParams] = useSearchParams()
+  const [query, setQuery] = useState(
+    searchParams.get('q') || 'How does memory retrieval depend on context?',
+  )
   const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>('All')
 
   const filteredResults = useMemo(() => {

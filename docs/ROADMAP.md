@@ -11,11 +11,13 @@ Status: complete for UI demo
 
 ## Milestone 2: Document ingestion
 
-Planned focus:
+Status: local implementation complete; real Docling conversion verification pending
 
-- Upload flow connected to a document processing API
-- Metadata extraction, status tracking and page references
-- Better file handling for PDFs, OCR and scanned notes
+- Library PDF upload and drag/drop with server-side size, MIME and signature validation
+- FastAPI proxy to Docling Serve's asynchronous REST API
+- Real job state polling and extracted Markdown/structured content reader
+- Source-page references exposed when Docling returns provenance
+- Job and document state are process-local; uploaded PDF bytes are temporary
 
 ## Milestone 3: Retrieval and search
 
