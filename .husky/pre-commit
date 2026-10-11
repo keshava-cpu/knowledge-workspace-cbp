@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+npx prettier --write .
+npx eslint . --max-warnings=0

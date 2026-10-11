@@ -83,7 +83,12 @@ export function AppShell() {
               className="ml-auto hidden lg:inline-flex"
               onClick={() => setSidebarCollapsed((value) => !value)}
             >
-              <ChevronDown className={['h-4 w-4 transition-transform', sidebarCollapsed ? 'rotate-90' : '-rotate-90'].join(' ')} />
+              <ChevronDown
+                className={[
+                  'h-4 w-4 transition-transform',
+                  sidebarCollapsed ? 'rotate-90' : '-rotate-90',
+                ].join(' ')}
+              />
             </Button>
             <Button
               variant="ghost"
@@ -119,8 +124,18 @@ export function AppShell() {
             ))}
           </nav>
 
-          <div className={['mt-auto border-t border-white/10 p-3', sidebarCollapsed ? 'px-2' : ''].join(' ')}>
-            <div className={['flex items-center gap-3 rounded-lg bg-white/3 p-2', sidebarCollapsed ? 'justify-center' : ''].join(' ')}>
+          <div
+            className={[
+              'mt-auto border-t border-white/10 p-3',
+              sidebarCollapsed ? 'px-2' : '',
+            ].join(' ')}
+          >
+            <div
+              className={[
+                'flex items-center gap-3 rounded-lg bg-white/3 p-2',
+                sidebarCollapsed ? 'justify-center' : '',
+              ].join(' ')}
+            >
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500/15 text-indigo-200 ring-1 ring-indigo-400/30">
                 <UserCircle2 className="h-4 w-4" />
               </div>

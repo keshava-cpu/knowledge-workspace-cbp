@@ -27,7 +27,9 @@ export function LibraryPage() {
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.25em] text-indigo-300">Library</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white">Your knowledge base</h2>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white">
+            Your knowledge base
+          </h2>
         </div>
         <Button className="gap-2 bg-indigo-500 text-white hover:bg-indigo-400">
           <UploadCloud className="h-4 w-4" />
@@ -59,7 +61,9 @@ export function LibraryPage() {
             variant={activeStatus === status ? 'default' : 'secondary'}
             size="sm"
             onClick={() => setActiveStatus(status)}
-            className={activeStatus === status ? 'bg-indigo-500 text-white hover:bg-indigo-400' : ''}
+            className={
+              activeStatus === status ? 'bg-indigo-500 text-white hover:bg-indigo-400' : ''
+            }
           >
             {status}
           </Button>
@@ -74,7 +78,9 @@ export function LibraryPage() {
             </div>
             <div>
               <p className="font-medium text-zinc-100">Drop a PDF or note to begin ingestion</p>
-              <p className="text-zinc-400">Sample upload zone for future document processing workflows.</p>
+              <p className="text-zinc-400">
+                Sample upload zone for future document processing workflows.
+              </p>
             </div>
           </div>
           <Button variant="outline">Browse files</Button>
@@ -94,9 +100,12 @@ export function LibraryPage() {
               <span
                 className={[
                   'inline-flex rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.2em]',
-                  document.status === 'Processed' && 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/20',
-                  document.status === 'Ingesting' && 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/20',
-                  document.status === 'Needs review' && 'bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/20',
+                  document.status === 'Processed' &&
+                    'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/20',
+                  document.status === 'Ingesting' &&
+                    'bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/20',
+                  document.status === 'Needs review' &&
+                    'bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/20',
                   document.status === 'Queued' && 'bg-zinc-700 text-zinc-200 ring-1 ring-white/10',
                 ].join(' ')}
               >
@@ -129,7 +138,11 @@ export function LibraryPage() {
 
             <div className="mt-5 flex items-center justify-between">
               <span className="text-xs text-zinc-400">Open source</span>
-              <Button variant="ghost" size="sm" className="gap-2 px-0 text-indigo-300 hover:text-indigo-200">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2 px-0 text-indigo-300 hover:text-indigo-200"
+              >
                 Open
                 <ArrowUpRight className="h-4 w-4" />
               </Button>

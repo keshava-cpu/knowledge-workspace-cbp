@@ -44,7 +44,9 @@ export function SearchPage() {
                 variant={activeFilter === filter ? 'default' : 'secondary'}
                 size="sm"
                 onClick={() => setActiveFilter(filter)}
-                className={activeFilter === filter ? 'bg-indigo-500 text-white hover:bg-indigo-400' : ''}
+                className={
+                  activeFilter === filter ? 'bg-indigo-500 text-white hover:bg-indigo-400' : ''
+                }
               >
                 {filter}
               </Button>
@@ -75,7 +77,9 @@ export function SearchPage() {
                 <h3 className="text-lg font-medium text-white">{result.title}</h3>
                 <p className="mt-1 text-sm text-zinc-400">{result.section}</p>
               </div>
-              <span className="rounded-lg bg-white/[0.03] px-2 py-1 text-xs text-zinc-300">{result.page}</span>
+              <span className="rounded-lg bg-white/[0.03] px-2 py-1 text-xs text-zinc-300">
+                {result.page}
+              </span>
             </div>
 
             <p className="text-[15px] leading-7 text-zinc-200">{result.excerpt}</p>

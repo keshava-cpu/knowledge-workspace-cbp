@@ -20,9 +20,12 @@ export function LoginPage() {
       <div className="grid gap-6 overflow-hidden rounded-3xl border border-white/10 bg-[#10151c] lg:grid-cols-[1.1fr_0.9fr]">
         <div className="border-b border-white/10 bg-gradient-to-br from-indigo-500/8 via-transparent to-transparent p-8 lg:border-b-0 lg:border-r">
           <p className="text-sm uppercase tracking-[0.3em] text-indigo-300">Access</p>
-          <h2 className="mt-4 text-4xl font-semibold text-white">A focused workspace for reading and research.</h2>
+          <h2 className="mt-4 text-4xl font-semibold text-white">
+            A focused workspace for reading and research.
+          </h2>
           <p className="mt-4 max-w-md text-zinc-300">
-            Sign in to sync notes, keep track of reading activity and prepare for future document ingestion flows.
+            Sign in to sync notes, keep track of reading activity and prepare for future document
+            ingestion flows.
           </p>
 
           <div className="mt-8 space-y-3 text-sm text-zinc-200">
@@ -91,7 +94,10 @@ export function LoginPage() {
               />
             </label>
 
-            <Button type="submit" className="w-full gap-2 bg-indigo-500 text-white hover:bg-indigo-400">
+            <Button
+              type="submit"
+              className="w-full gap-2 bg-indigo-500 text-white hover:bg-indigo-400"
+            >
               {mode === 'signin' ? 'Sign in' : 'Create account'}
               <ArrowRight className="h-4 w-4" />
             </Button>
@@ -112,7 +118,11 @@ export function LoginPage() {
             </div>
           </form>
 
-          {status && <p className="mt-4 rounded-xl border border-indigo-400/20 bg-indigo-500/8 px-3 py-2 text-sm text-indigo-200">{status}</p>}
+          {status && (
+            <p className="mt-4 rounded-xl border border-indigo-400/20 bg-indigo-500/8 px-3 py-2 text-sm text-indigo-200">
+              {status}
+            </p>
+          )}
         </div>
       </div>
     </div>

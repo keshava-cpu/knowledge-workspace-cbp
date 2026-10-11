@@ -40,7 +40,9 @@ export function SettingsPage() {
         <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
           <div>
             <p className="text-base font-medium text-white">Dark theme</p>
-            <p className="text-sm text-zinc-400">Use the default research-focused reading surface.</p>
+            <p className="text-sm text-zinc-400">
+              Use the default research-focused reading surface.
+            </p>
           </div>
           <button
             type="button"
@@ -63,7 +65,9 @@ export function SettingsPage() {
         <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
           <div>
             <p className="text-base font-medium text-white">Automatic sync</p>
-            <p className="text-sm text-zinc-400">Keep notes and reader state synchronized with your workspace.</p>
+            <p className="text-sm text-zinc-400">
+              Keep notes and reader state synchronized with your workspace.
+            </p>
           </div>
           <button
             type="button"
@@ -74,14 +78,21 @@ export function SettingsPage() {
               settings.autoSync ? 'bg-indigo-500' : 'bg-zinc-700',
             ].join(' ')}
           >
-            <span className={['inline-block h-5 w-5 rounded-full bg-white transition-transform', settings.autoSync ? 'translate-x-6' : 'translate-x-1'].join(' ')} />
+            <span
+              className={[
+                'inline-block h-5 w-5 rounded-full bg-white transition-transform',
+                settings.autoSync ? 'translate-x-6' : 'translate-x-1',
+              ].join(' ')}
+            />
           </button>
         </div>
 
         <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
           <div>
             <p className="text-base font-medium text-white">Highlight source passages</p>
-            <p className="text-sm text-zinc-400">Keep references, excerpts and page markers visible while reading.</p>
+            <p className="text-sm text-zinc-400">
+              Keep references, excerpts and page markers visible while reading.
+            </p>
           </div>
           <button
             type="button"
@@ -92,14 +103,21 @@ export function SettingsPage() {
               settings.sourceHighlights ? 'bg-indigo-500' : 'bg-zinc-700',
             ].join(' ')}
           >
-            <span className={['inline-block h-5 w-5 rounded-full bg-white transition-transform', settings.sourceHighlights ? 'translate-x-6' : 'translate-x-1'].join(' ')} />
+            <span
+              className={[
+                'inline-block h-5 w-5 rounded-full bg-white transition-transform',
+                settings.sourceHighlights ? 'translate-x-6' : 'translate-x-1',
+              ].join(' ')}
+            />
           </button>
         </div>
 
         <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
           <div>
             <p className="text-base font-medium text-white">Daily reading digest</p>
-            <p className="text-sm text-zinc-400">Deliver a brief summary of recently opened materials and highlights.</p>
+            <p className="text-sm text-zinc-400">
+              Deliver a brief summary of recently opened materials and highlights.
+            </p>
           </div>
           <button
             type="button"
@@ -110,7 +128,12 @@ export function SettingsPage() {
               settings.dailyDigest ? 'bg-indigo-500' : 'bg-zinc-700',
             ].join(' ')}
           >
-            <span className={['inline-block h-5 w-5 rounded-full bg-white transition-transform', settings.dailyDigest ? 'translate-x-6' : 'translate-x-1'].join(' ')} />
+            <span
+              className={[
+                'inline-block h-5 w-5 rounded-full bg-white transition-transform',
+                settings.dailyDigest ? 'translate-x-6' : 'translate-x-1',
+              ].join(' ')}
+            />
           </button>
         </div>
 
@@ -118,7 +141,9 @@ export function SettingsPage() {
           Default library view
           <select
             value={settings.setDefaultLibrary}
-            onChange={(event) => setSettings((current) => ({ ...current, setDefaultLibrary: event.target.value }))}
+            onChange={(event) =>
+              setSettings((current) => ({ ...current, setDefaultLibrary: event.target.value }))
+            }
             className="mt-2 w-full rounded-xl border border-white/10 bg-[#0d1117] px-3 py-2.5 text-zinc-100 outline-none"
           >
             <option>All documents</option>

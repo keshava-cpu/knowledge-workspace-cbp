@@ -8,7 +8,8 @@ export function ReaderPage() {
   const [assistantOpen, setAssistantOpen] = useState(true)
   const [selectedSection, setSelectedSection] = useState('overview')
 
-  const activeSection = bookSections.find((section) => section.id === selectedSection) ?? bookSections[0]
+  const activeSection =
+    bookSections.find((section) => section.id === selectedSection) ?? bookSections[0]
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -31,10 +32,18 @@ export function ReaderPage() {
           ].join(' ')}
         >
           <div className="mb-3 flex items-center justify-between gap-2">
-            <Button variant="ghost" className="px-1 text-zinc-300" onClick={() => setTocOpen((value) => !value)}>
-              <ChevronRight className={['h-4 w-4 transition-transform', tocOpen ? 'rotate-90' : ''].join(' ')} />
+            <Button
+              variant="ghost"
+              className="px-1 text-zinc-300"
+              onClick={() => setTocOpen((value) => !value)}
+            >
+              <ChevronRight
+                className={['h-4 w-4 transition-transform', tocOpen ? 'rotate-90' : ''].join(' ')}
+              />
             </Button>
-            {tocOpen && <span className="text-xs uppercase tracking-[0.25em] text-zinc-400">Contents</span>}
+            {tocOpen && (
+              <span className="text-xs uppercase tracking-[0.25em] text-zinc-400">Contents</span>
+            )}
           </div>
 
           {tocOpen && (
@@ -52,7 +61,9 @@ export function ReaderPage() {
                   ].join(' ')}
                 >
                   <span>{section.label}</span>
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">p. {section.page}</span>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                    p. {section.page}
+                  </span>
                 </button>
               ))}
             </nav>
@@ -62,7 +73,9 @@ export function ReaderPage() {
         <article className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-[#10151c] px-5 py-6 sm:px-8">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.25em] text-zinc-500">Current section</p>
+              <p className="text-[11px] uppercase tracking-[0.25em] text-zinc-500">
+                Current section
+              </p>
               <h3 className="mt-2 text-2xl font-semibold text-white">{activeSection.label}</h3>
             </div>
             <div className="flex items-center gap-2 text-sm text-zinc-400">
@@ -92,9 +105,19 @@ export function ReaderPage() {
           ].join(' ')}
         >
           <div className="mb-3 flex items-center justify-between gap-2">
-            {assistantOpen && <span className="text-xs uppercase tracking-[0.25em] text-zinc-400">Assistant</span>}
-            <Button variant="ghost" className="px-1 text-zinc-300" onClick={() => setAssistantOpen((value) => !value)}>
-              {assistantOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+            {assistantOpen && (
+              <span className="text-xs uppercase tracking-[0.25em] text-zinc-400">Assistant</span>
+            )}
+            <Button
+              variant="ghost"
+              className="px-1 text-zinc-300"
+              onClick={() => setAssistantOpen((value) => !value)}
+            >
+              {assistantOpen ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <PanelRightOpen className="h-4 w-4" />
+              )}
             </Button>
           </div>
 
@@ -106,15 +129,22 @@ export function ReaderPage() {
                   <span className="text-sm font-medium">Context search</span>
                 </div>
                 <p className="text-sm text-zinc-300">
-                  Compare the chapter’s explanation of synaptic plasticity with the later retrieval findings.
+                  Compare the chapter’s explanation of synaptic plasticity with the later retrieval
+                  findings.
                 </p>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="mb-2 text-[10px] uppercase tracking-[0.22em] text-zinc-500">Source passages</p>
+                <p className="mb-2 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+                  Source passages
+                </p>
                 <ul className="space-y-2 text-sm text-zinc-300">
-                  <li className="rounded-lg bg-white/[0.03] p-2">“Memory formation depends on repeated activation...”</li>
-                  <li className="rounded-lg bg-white/[0.03] p-2">“Retrieval is most effective when the original context...”</li>
+                  <li className="rounded-lg bg-white/[0.03] p-2">
+                    “Memory formation depends on repeated activation...”
+                  </li>
+                  <li className="rounded-lg bg-white/[0.03] p-2">
+                    “Retrieval is most effective when the original context...”
+                  </li>
                 </ul>
               </div>
             </div>

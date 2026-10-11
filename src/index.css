@@ -1,14 +1,17 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 :root {
   color-scheme: dark;
+  --radius: 0rem;
   --background: #0b0d12;
   --foreground: #f4f4f5;
   --card: #10151c;
   --card-foreground: #f4f4f5;
   --muted: #171d25;
   --muted-foreground: #a1a1aa;
+  --popover: #121924;
+  --popover-foreground: #f4f4f5;
   --border: rgba(255, 255, 255, 0.1);
   --input: rgba(255, 255, 255, 0.05);
   --ring: rgba(99, 102, 241, 0.5);
@@ -16,6 +19,10 @@
   --primary-foreground: #f8fafc;
   --secondary: #171d25;
   --secondary-foreground: #e4e4e7;
+  --accent: #1d2430;
+  --accent-foreground: #f4f4f5;
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
   --sidebar: #11151c;
   --sidebar-foreground: #f4f4f5;
 }
@@ -38,6 +45,53 @@ body {
   background: var(--background);
   color: var(--foreground);
   line-height: 1.5;
+}
+
+.bn-shadcn {
+  --bn-border-color: var(--border);
+  --bn-colors-editor-background: rgba(9, 12, 17, 0.96);
+  --bn-colors-menu-background: rgba(16, 21, 28, 0.96);
+  --bn-colors-tooltip-background: rgba(16, 21, 28, 0.96);
+  --bn-colors-tooltip-text: var(--foreground);
+  --bn-colors-editor-text: var(--foreground);
+  --bn-colors-menu-text: var(--foreground);
+  --bn-colors-hovered-background: rgba(255, 255, 255, 0.04);
+}
+
+.bn-shadcn .bn-editor {
+  min-height: 480px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: rgba(9, 12, 17, 0.96);
+  color: var(--foreground);
+  box-shadow: none;
+}
+
+.bn-shadcn .bn-editor:focus-visible {
+  outline: none;
+}
+
+.bn-shadcn .bn-block-content,
+.bn-shadcn .bn-block-outer {
+  border-radius: 0;
+}
+
+.bn-shadcn .bn-formatting-toolbar,
+.bn-shadcn .bn-suggestion-menu,
+.bn-shadcn .bn-color-picker-dropdown,
+.bn-shadcn .bn-dropdown {
+  border-radius: 0;
+  border: 1px solid var(--border);
+}
+
+.bn-shadcn .bn-suggestion-menu {
+  width: min(18rem, calc(100vw - 2rem));
+  max-height: min(16rem, calc(100vh - 2rem));
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  background: rgba(16, 21, 28, 0.84);
+  backdrop-filter: blur(10px);
 }
 
 button,
