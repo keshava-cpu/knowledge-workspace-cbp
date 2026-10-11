@@ -117,18 +117,20 @@ export function LoginPage() {
             >
               <Button
                 type="button"
-                variant={mode === 'signin' ? 'secondary' : 'ghost'}
+                variant={mode === 'signin' ? 'default' : 'outline'}
                 aria-pressed={mode === 'signin'}
                 disabled={isPending}
+                className="w-full shadow-sm"
                 onClick={() => setMode('signin')}
               >
                 Sign in
               </Button>
               <Button
                 type="button"
-                variant={mode === 'register' ? 'secondary' : 'ghost'}
+                variant={mode === 'register' ? 'default' : 'outline'}
                 aria-pressed={mode === 'register'}
                 disabled={isPending}
+                className="w-full shadow-sm"
                 onClick={() => setMode('register')}
               >
                 Create account

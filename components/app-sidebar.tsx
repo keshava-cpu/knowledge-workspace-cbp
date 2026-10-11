@@ -36,10 +36,10 @@ export function AppSidebar({ user, onSignOut, ...props }: AppSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" tooltip="Knowledge Workspace">
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <Sparkles className="size-4" />
+              <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <Sparkles className="size-[18px]" />
               </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
+              <div className="grid flex-1 text-left text-[15px] leading-tight">
                 <span className="truncate font-medium">Knowledge Workspace</span>
                 <span className="truncate text-xs">Private research library</span>
               </div>
@@ -54,7 +54,11 @@ export function AppSidebar({ user, onSignOut, ...props }: AppSidebarProps) {
             <SidebarMenu>
               {navigation.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={item.title}
+                    className="h-9 text-[15px] [&>svg]:size-[18px]"
+                  >
                     <NavLink to={item.url} end={item.url === '/'}>
                       <item.icon />
                       <span>{item.title}</span>
