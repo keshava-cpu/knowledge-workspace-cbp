@@ -137,14 +137,18 @@ export function LoginPage() {
               </Button>
             </div>
 
-            <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
+            <form
+              autoComplete={mode === 'register' ? 'off' : 'on'}
+              className="space-y-4"
+              onSubmit={(event) => void handleSubmit(event)}
+            >
               {mode === 'register' && (
                 <label htmlFor="full-name" className="block space-y-1.5 text-sm font-medium">
                   <span>Full name</span>
                   <Input
                     id="full-name"
                     type="text"
-                    autoComplete="name"
+                    autoComplete="off"
                     required
                     value={fullName}
                     onChange={(event) => setFullName(event.target.value)}
@@ -158,7 +162,7 @@ export function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  autoComplete="email"
+                  autoComplete={mode === 'signin' ? 'username' : 'off'}
                   required
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}

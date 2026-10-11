@@ -81,6 +81,8 @@ export function AppShell() {
               <Search className="size-4" />
               <input
                 ref={globalSearchRef}
+                type="text"
+                name="workspace-search"
                 value={globalQuery}
                 onChange={(event) => setGlobalQuery(event.target.value)}
                 onKeyDown={(event) => {
@@ -88,6 +90,10 @@ export function AppShell() {
                     navigate(`/search?q=${encodeURIComponent(globalQuery)}`)
                 }}
                 aria-label="Global search"
+                autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 placeholder="Search concepts, books, or passages"
                 className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
               />

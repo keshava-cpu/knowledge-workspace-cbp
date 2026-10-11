@@ -26,7 +26,7 @@ const statuses: { label: string; value: DocumentStatus | 'all' }[] = [
 
 function DocumentGridSkeleton() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Loading documents">
+    <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3" aria-label="Loading documents">
       {Array.from({ length: 6 }, (_, index) => (
         <div key={index} className="space-y-4 rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between">
@@ -126,7 +126,7 @@ export function LibraryPage() {
       {isLoading ? (
         <DocumentGridSkeleton />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
           {filteredDocuments.map((document) => (
             <DocumentCard
               key={document.id}

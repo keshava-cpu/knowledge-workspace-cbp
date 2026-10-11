@@ -123,7 +123,7 @@ export function DocumentCard({ document, onCancel, onDelete }: DocumentCardProps
 
         {isActive && (
           <div className="mt-4 border border-amber-400/15 bg-amber-400/[0.04] p-3">
-            <div className="mb-2 flex items-center justify-between text-xs text-amber-100/80">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-100/80">
               <span className="inline-flex items-center gap-2">
                 <Clock3 className="h-3.5 w-3.5" />
                 Parsing for {elapsed}
@@ -142,8 +142,8 @@ export function DocumentCard({ document, onCancel, onDelete }: DocumentCardProps
         )}
       </CardContent>
 
-      <CardFooter className="mt-5 flex items-center justify-between border-t border-white/5 p-4">
-        <span className="text-xs text-zinc-500">
+      <CardFooter className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/5 p-4">
+        <span className="min-w-0 flex-1 break-words text-xs text-zinc-500">
           {document.status === 'completed'
             ? 'Extracted text available'
             : document.status === 'failed'
@@ -152,7 +152,7 @@ export function DocumentCard({ document, onCancel, onDelete }: DocumentCardProps
                 ? 'Parsing stopped; no partial checkpoint was returned'
                 : 'Waiting for Docling Serve'}
         </span>
-        <div className="flex items-center gap-1">
+        <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1">
           {isActive && (
             <Button
               variant="outline"

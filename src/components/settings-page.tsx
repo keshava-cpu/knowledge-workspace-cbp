@@ -156,6 +156,8 @@ export function SettingsPage() {
           <CardContent className="space-y-3">
             <input
               type="password"
+              name="workspace-password-update"
+              autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               minLength={6}
