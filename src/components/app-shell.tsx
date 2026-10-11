@@ -5,16 +5,15 @@ import { Button } from '../../components/ui/button'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '../../components/ui/sidebar'
 import { AppSidebar } from '../../components/app-sidebar'
 import { useAuth } from '../auth/auth-context'
-import { AuthCallbackPage } from './auth-callback-page'
 import { DocumentReaderPage } from './document-reader-page'
 import { LibraryPage } from './library-page'
-import { LoginPage } from './login-page'
 import { ModeToggle } from './mode-toggle'
 import { NotesPage } from './notes-page'
 import { ProtectedRoute } from './protected-route'
 import { ReaderPage } from './reader-page'
 import { SearchPage } from './search-page'
 import { SettingsPage } from './settings-page'
+import { NotFoundPage, UnauthorizedPage } from './status-pages'
 
 const pageTitles: Record<string, string> = {
   '/': 'Library',
@@ -22,6 +21,7 @@ const pageTitles: Record<string, string> = {
   '/search': 'Global search',
   '/notes': 'Notes',
   '/login': 'Account',
+  '/unauthorized': 'Access required',
   '/settings': 'Settings',
 }
 
@@ -35,7 +35,11 @@ export function AppShell() {
   const activeTitle = location.pathname.startsWith('/documents/')
     ? 'Document'
     : (pageTitles[location.pathname] ??
-      (location.pathname === '/auth/callback' ? 'Account' : 'Knowledge workspace'))
+      (location.pathname === '/auth/callback'
+        ? 'Account'
+        : location.pathname === '/unauthorized'
+          ? 'Access required'
+          : 'Page not found'))
 
   useEffect(() => {
     function focusGlobalSearch(event: KeyboardEvent) {
@@ -158,8 +162,7 @@ export function AppShell() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/auth/callback" element={<AuthCallbackPage />} />
+              <Route path="/unauthorized" element={<UnauthorizedPage />} />
               <Route
                 path="/settings"
                 element={
@@ -168,6 +171,7 @@ export function AppShell() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </div>
         </main>

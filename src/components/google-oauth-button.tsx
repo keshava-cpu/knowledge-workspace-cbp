@@ -37,7 +37,7 @@ export function GoogleOAuthButton({
     <Button
       type="button"
       variant="outline"
-      className="w-full gap-3 border-white/15 bg-white/[0.03] text-zinc-100 hover:bg-white/[0.07]"
+      className="w-full gap-3 border-border bg-background text-foreground hover:bg-accent"
       disabled={disabled || isPending}
       aria-busy={isPending}
       onClick={() => void handleClick()}
@@ -47,7 +47,7 @@ export function GoogleOAuthButton({
       ) : (
         <span
           aria-hidden="true"
-          className="flex size-5 items-center justify-center border border-white/15 bg-white text-sm font-bold text-[#4285f4]"
+          className="flex size-5 items-center justify-center border border-border bg-white text-sm font-bold text-[#4285f4]"
         >
           G
         </span>

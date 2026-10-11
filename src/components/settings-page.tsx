@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { AlertTriangle, Moon, Sun, Laptop, LoaderCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AlertTriangle, Database, HardDrive, Moon, Sun, Laptop, LoaderCircle } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '../../components/ui/dialog'
 import { useAuth } from '../auth/auth-context'
+import { getSupabaseClient } from '../lib/supabase'
 import { useTheme, type Theme } from './theme-provider'
 
 const themes: { value: Theme; label: string; icon: typeof Sun }[] = [
@@ -20,16 +21,69 @@ const themes: { value: Theme; label: string; icon: typeof Sun }[] = [
   { value: 'system', label: 'System', icon: Laptop },
 ]
 
+const FREE_FILE_STORAGE_LIMIT_BYTES = 1_000_000_000
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1000) return `${bytes} B`
+
+  const units = ['KB', 'MB', 'GB', 'TB']
+  let value = bytes
+  let unitIndex = -1
+  while (value >= 1000 && unitIndex < units.length - 1) {
+    value /= 1000
+    unitIndex += 1
+  }
+  return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`
+}
+
 export function SettingsPage() {
-  const { deleteAccount, updatePassword } = useAuth()
+  const { deleteAccount, updatePassword, user } = useAuth()
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
+  const supabase = getSupabaseClient()
+  const userId = user?.id
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [confirmation, setConfirmation] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [password, setPassword] = useState('')
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
+  const [storageBytes, setStorageBytes] = useState(0)
+  const [isStorageLoading, setIsStorageLoading] = useState(true)
+  const [storageUsageError, setStorageUsageError] = useState(false)
+
+  useEffect(() => {
+    if (!supabase || !userId) return
+
+    const supabaseClient = supabase
+    let isCancelled = false
+
+    async function loadStorageUsage() {
+      try {
+        const { data, error: usageError } = await supabaseClient.rpc(
+          'get_document_bucket_usage_bytes',
+        )
+        if (usageError) throw usageError
+
+        const totalBytes = Number(data)
+        if (!Number.isFinite(totalBytes) || totalBytes < 0) {
+          throw new Error('Storage usage returned an invalid byte count.')
+        }
+        if (!isCancelled) setStorageBytes(totalBytes)
+      } catch {
+        if (!isCancelled) setStorageUsageError(true)
+      } finally {
+        if (!isCancelled) setIsStorageLoading(false)
+      }
+    }
+
+    void loadStorageUsage()
+    return () => {
+      isCancelled = true
+    }
+  }, [supabase, userId])
+
+  const remainingStorageBytes = Math.max(0, FREE_FILE_STORAGE_LIMIT_BYTES - storageBytes)
 
   async function handlePasswordUpdate() {
     setPasswordMessage(null)
@@ -115,6 +169,76 @@ export function SettingsPage() {
             {passwordMessage && (
               <p className="text-sm text-emerald-600 dark:text-emerald-400">{passwordMessage}</p>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Supabase storage limits</CardTitle>
+            <CardDescription>
+              Free-plan reference quotas. Database capacity is shared by all users of this project.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="border border-border p-4">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Database className="size-4 text-muted-foreground" aria-hidden="true" />
+                  Postgres database
+                </div>
+                <p className="mt-3 text-2xl font-semibold">500 MB</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Per project, shared across its users
+                </p>
+              </div>
+              <div className="border border-border p-4">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <HardDrive className="size-4 text-muted-foreground" aria-hidden="true" />
+                  File Storage
+                </div>
+                <p className="mt-3 text-2xl font-semibold">1 GB</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Organization-wide, separate from database
+                </p>
+                <p className="mt-3 border-t border-border pt-3 text-sm">
+                  Used by this app:{' '}
+                  <span className="font-semibold">
+                    {!supabase || !userId || storageUsageError
+                      ? 'Unavailable'
+                      : isStorageLoading
+                        ? 'Loading...'
+                        : formatBytes(storageBytes)}
+                  </span>
+                </p>
+                <p className="mt-1 text-sm">
+                  Estimated remaining:{' '}
+                  <span className="font-semibold">
+                    {!supabase || !userId || storageUsageError
+                      ? 'Unavailable'
+                      : isStorageLoading
+                        ? 'Loading...'
+                        : formatBytes(remainingStorageBytes)}
+                  </span>
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Counts all users' PDFs in this app. Other buckets or projects in your organization
+                  may reduce the actual remaining allowance.
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              These are Free-plan limits, not live usage readings. Check your project plan and usage
+              in{' '}
+              <a
+                href="https://supabase.com/dashboard"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                Supabase Dashboard
+              </a>
+              .
+            </p>
           </CardContent>
         </Card>
 
