@@ -7,7 +7,6 @@ import { AppSidebar } from '../../components/app-sidebar'
 import { useAuth } from '../auth/auth-context'
 import { DocumentReaderPage } from './document-reader-page'
 import { LibraryPage } from './library-page'
-import { ModeToggle } from './mode-toggle'
 import { NotesPage } from './notes-page'
 import { ProtectedRoute } from './protected-route'
 import { ReaderPage } from './reader-page'
@@ -96,7 +95,6 @@ export function AppShell() {
           </div>
 
           <div className="flex items-center gap-2">
-            <ModeToggle />
             <Button variant="ghost" size="icon-sm" aria-label="Notifications">
               <Bell />
             </Button>
