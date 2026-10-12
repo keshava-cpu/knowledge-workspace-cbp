@@ -1,4 +1,5 @@
 import asyncio
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -57,3 +58,61 @@ def test_supabase_store_uploads_with_user_token_and_publishable_key(tmp_path: Pa
 
     assert [request.method for request in requests] == ["POST", "POST", "POST"]
     assert requests[0].url.path.endswith("/user-id/document-id.pdf")
+
+
+def test_supabase_hybrid_search_uses_one_authenticated_bounded_rpc() -> None:
+    requests: list[httpx.Request] = []
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        assert request.method == "POST"
+        assert request.url.path == "/rest/v1/rpc/search_document_chunks"
+        assert request.headers["authorization"] == "Bearer verified-user-token"
+        assert request.headers["apikey"] == "publishable-key"
+        payload = json.loads(request.content)
+        assert payload["p_query_text"] == "retrieval context"
+        assert payload["p_embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
+        assert payload["p_document_id"] == "document-id"
+        assert payload["p_result_limit"] == 7
+        assert len(payload["p_query_embedding"]) == 384
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "chunk_id": "chunk-id",
+                    "document_id": "document-id",
+                    "title": "paper",
+                    "filename": "paper.pdf",
+                    "excerpt": "Source passage",
+                    "page_numbers": [3],
+                    "location_metadata": [{"page_no": 3}],
+                    "score": 0.03,
+                    "semantic_rank": 1,
+                    "lexical_rank": 2,
+                    "retrieval_methods": ["semantic", "exact"],
+                }
+            ],
+        )
+
+    store = SupabaseStore(
+        "https://supabase.test",
+        "publishable-key",
+        transport=httpx.MockTransport(handle_request),
+    )
+    results = asyncio.run(
+        store.hybrid_search(
+            "owner-id",
+            "retrieval context",
+            [0.1] * 384,
+            "sentence-transformers/all-MiniLM-L6-v2",
+            "document-id",
+            7,
+            80,
+            "verified-user-token",
+        )
+    )
+
+    assert len(requests) == 1
+    assert results[0].page_numbers == [3]
+    assert results[0].location_metadata == [{"page_no": 3}]
+    assert results[0].retrieval_methods == ["semantic", "exact"]

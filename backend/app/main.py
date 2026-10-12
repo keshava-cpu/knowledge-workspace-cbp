@@ -9,7 +9,9 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
+from pydantic import BaseModel, Field
+from uuid import UUID
 
 from app.auth import (
     AuthenticatedUser,
@@ -23,7 +25,16 @@ from app.docling_client import (
     DoclingServeError,
     parse_conversion_result,
 )
-from app.models import DocumentDetail, DocumentSummary, JobStatus, JobSummary
+from app.embeddings import EmbeddingService, chunk_blocks
+from app.models import (
+    DocumentDetail,
+    DocumentSummary,
+    ExtractedBlock,
+    JobStatus,
+    JobSummary,
+    SearchResult,
+)
+from app.search import SearchService
 from app.store import DocumentRecord, InMemoryStore, JobRecord, SupabaseStore, SupabaseStoreError
 
 logger = logging.getLogger(__name__)
@@ -38,6 +49,7 @@ class Runtime:
         settings: Settings,
         docling_client: Any | None = None,
         auth_verifier: Any | None = None,
+        embedding_service: EmbeddingService | None = None,
     ) -> None:
         self.settings = settings
         self.docling = docling_client or DoclingServeClient(settings)
@@ -51,6 +63,17 @@ class Runtime:
         )
         self.tasks: set[asyncio.Task[None]] = set()
         self.job_tasks: dict[str, asyncio.Task[None]] = {}
+        self.indexing_document_ids: set[str] = set()
+        self.embeddings = embedding_service or EmbeddingService(
+            settings.embedding_model, settings.embedding_max_tokens, settings.embedding_batch_size
+        )
+        self.search = SearchService(self.embeddings)
+
+
+class SearchRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=500)
+    document_id: UUID | None = None
+    limit: int = Field(default=10, ge=1, le=20)
 
 
 def _now() -> datetime:
@@ -80,6 +103,9 @@ def _document_summary(document: DocumentRecord, job: JobRecord) -> DocumentSumma
         status=job.status,
         error_message=job.error_message,
         page_count=document.page_count,
+        indexing_status=document.indexing_status,
+        indexed_chunks=document.indexed_chunks,
+        indexing_error=document.indexing_error,
         processing_seconds=(
             round((job.updated_at - job.created_at).total_seconds(), 1)
             if job.status in {"completed", "failed", "cancelled"}
@@ -108,6 +134,139 @@ async def _persist_job_status(runtime: Runtime, job: JobRecord, user_token: str 
         if not user_token:
             raise SupabaseStoreError("Verified Supabase access token is unavailable.")
         await runtime.store.update_job(job, user_token)
+
+
+async def _set_indexing_state(
+    runtime: Runtime,
+    document: DocumentRecord,
+    status: str,
+    indexed_chunks: int,
+    access_token: str | None,
+    error: str | None = None,
+) -> None:
+    if isinstance(runtime.store, SupabaseStore):
+        if not access_token:
+            raise SupabaseStoreError("Verified Supabase access token is unavailable.")
+        await runtime.store.update_indexing_state(
+            document, status, indexed_chunks, access_token, error
+        )
+    else:
+        runtime.store.update_indexing_state(document, status, indexed_chunks, error)
+
+
+async def _index_document(
+    runtime: Runtime, document: DocumentRecord, access_token: str | None
+) -> None:
+    if document.content is None or document.id in runtime.indexing_document_ids:
+        return
+    runtime.indexing_document_ids.add(document.id)
+    started = time.perf_counter()
+    runtime.search.invalidate_owner(document.owner_id)
+    try:
+        await _set_indexing_state(runtime, document, "processing", 0, access_token)
+        source_blocks = document.content.blocks or [
+            ExtractedBlock(kind="text", text=document.content.markdown, page_numbers=[])
+        ]
+        chunks = await asyncio.to_thread(
+            chunk_blocks,
+            source_blocks,
+            runtime.embeddings.count_tokens,
+            runtime.embeddings.max_tokens,
+        )
+        if isinstance(runtime.store, SupabaseStore):
+            if not access_token:
+                raise SupabaseStoreError("Verified Supabase access token is unavailable.")
+            indexed_chunks = await runtime.store.get_indexed_chunks(document, access_token)
+        else:
+            indexed_chunks = runtime.store.get_indexed_chunks(document.id)
+
+        def is_current(chunk_index: int, chunk: Any) -> bool:
+            existing = indexed_chunks.get(chunk_index)
+            return bool(
+                existing
+                and existing.get("content") == chunk.content
+                and existing.get("page_numbers") == chunk.page_numbers
+                and existing.get("location_metadata") == chunk.location_metadata
+                and existing.get("embedding_model") == runtime.embeddings.model_name
+            )
+
+        indexed_count = sum(is_current(chunk.chunk_index, chunk) for chunk in chunks)
+        await _set_indexing_state(
+            runtime, document, "processing", indexed_count, access_token
+        )
+
+        for batch_start in range(0, len(chunks), runtime.embeddings.batch_size):
+            batch = chunks[batch_start : batch_start + runtime.embeddings.batch_size]
+            pending_batch = [
+                chunk for chunk in batch if not is_current(chunk.chunk_index, chunk)
+            ]
+            if not pending_batch:
+                continue
+            vectors = await asyncio.to_thread(
+                runtime.embeddings.embed_documents,
+                [chunk.content for chunk in pending_batch],
+            )
+            rows = [
+                {
+                    "chunk_index": chunk.chunk_index,
+                    "content": chunk.content,
+                    "page_numbers": chunk.page_numbers,
+                    "location_metadata": chunk.location_metadata,
+                    "embedding_model": runtime.embeddings.model_name,
+                    "embedding": vector,
+                }
+                for chunk, vector in zip(pending_batch, vectors, strict=True)
+            ]
+            if isinstance(runtime.store, SupabaseStore):
+                if not access_token:
+                    raise SupabaseStoreError("Verified Supabase access token is unavailable.")
+                await runtime.store.upsert_chunks(document, rows, access_token)
+            else:
+                runtime.store.upsert_chunks(document, rows)
+            for row in rows:
+                indexed_chunks[row["chunk_index"]] = row
+            indexed_count += len(pending_batch)
+            await _set_indexing_state(
+                runtime,
+                document,
+                "processing",
+                indexed_count,
+                access_token,
+            )
+
+        if isinstance(runtime.store, SupabaseStore):
+            if not access_token:
+                raise SupabaseStoreError("Verified Supabase access token is unavailable.")
+            await runtime.store.finish_chunk_index(document, len(chunks), access_token)
+        else:
+            runtime.store.finish_chunk_index(document, len(chunks))
+        await _set_indexing_state(
+            runtime, document, "completed", len(chunks), access_token
+        )
+        runtime.search.invalidate_owner(document.owner_id)
+        logger.info(
+            "document_indexing complete document=%s chunks=%d elapsed_seconds=%.3f",
+            document.id,
+            len(chunks),
+            time.perf_counter() - started,
+        )
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        logger.exception("Search indexing failed for document %s", document.id)
+        try:
+            await _set_indexing_state(
+                runtime,
+                document,
+                "failed",
+                document.indexed_chunks,
+                access_token,
+                "Search indexing failed. Retry indexing to continue.",
+            )
+        except Exception:
+            logger.exception("Could not persist indexing failure for %s", document.id)
+    finally:
+        runtime.indexing_document_ids.discard(document.id)
 
 
 async def require_current_user(
@@ -180,6 +339,9 @@ async def _monitor_job(runtime: Runtime, job: JobRecord) -> None:
                     )
                 _set_job_status(job, "completed")
                 await _persist_job_status(runtime, job, getattr(job, "access_token", None))
+                await _index_document(
+                    runtime, document, getattr(job, "access_token", None)
+                )
                 return
             else:
                 _set_job_status(
@@ -211,16 +373,32 @@ def create_app(
     settings: Settings | None = None,
     docling_client: Any | None = None,
     auth_verifier: Any | None = None,
+    embedding_service: EmbeddingService | None = None,
 ) -> FastAPI:
-    runtime = Runtime(settings or Settings.from_env(), docling_client, auth_verifier)
+    runtime = Runtime(
+        settings or Settings.from_env(), docling_client, auth_verifier, embedding_service
+    )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        model_started = time.perf_counter()
+        await asyncio.to_thread(runtime.embeddings.warmup)
+        logger.info(
+            "embedding_startup complete model=%s startup_seconds=%.3f",
+            runtime.embeddings.model_name,
+            time.perf_counter() - model_started,
+        )
         yield
         for task in runtime.tasks:
             task.cancel()
         if runtime.tasks:
             await asyncio.gather(*runtime.tasks, return_exceptions=True)
+        if not isinstance(runtime.store, SupabaseStore):
+            for pdf_path in runtime.store.pdf_paths.values():
+                try:
+                    pdf_path.unlink(missing_ok=True)
+                except OSError:
+                    logger.exception("Could not remove staged PDF %s", pdf_path)
 
     app = FastAPI(title="Knowledge Workspace API", version="0.1.0", lifespan=lifespan)
     app.state.runtime = runtime
@@ -352,6 +530,10 @@ def create_app(
                     raise HTTPException(status_code=502, detail=str(exc)) from exc
             runtime.store.documents[document_id] = document
             runtime.store.jobs[job_id] = job
+            if not isinstance(runtime.store, SupabaseStore):
+                runtime.store.pdf_paths[document_id] = temp_path
+                temp_path = None
+            runtime.search.invalidate_owner(user.id)
 
             background_task = asyncio.create_task(_monitor_job(runtime, job))
             runtime.tasks.add(background_task)
@@ -423,8 +605,15 @@ def create_app(
             task_to_cancel = runtime.job_tasks.get(document.job_id)
             runtime.store.documents.pop(document_id, None)
             runtime.store.jobs.pop(document.job_id, None)
+            pdf_path = runtime.store.pdf_paths.pop(document_id, None)
+            if pdf_path:
+                try:
+                    pdf_path.unlink(missing_ok=True)
+                except OSError:
+                    logger.exception("Could not remove PDF for document %s", document_id)
         if task_to_cancel:
             task_to_cancel.cancel()
+        runtime.search.invalidate_owner(user.id)
         return {"deleted": True}
 
     @app.get("/api/documents", response_model=list[DocumentSummary])
@@ -479,6 +668,39 @@ def create_app(
             raise HTTPException(status_code=404, detail="Document not found.")
         return _document_detail(document, runtime.store.jobs[document.job_id])
 
+    @app.get("/api/documents/{document_id}/pdf")
+    async def get_document_pdf(
+        document_id: UUID,
+        user: AuthenticatedUser = Depends(require_current_user),
+    ) -> Response:
+        document_key = str(document_id)
+        if isinstance(runtime.store, SupabaseStore):
+            if not user.access_token:
+                raise HTTPException(status_code=503, detail="Supabase access token unavailable.")
+            try:
+                pdf_bytes = await runtime.store.get_pdf(
+                    user.id, document_key, user.access_token
+                )
+            except SupabaseStoreError as exc:
+                raise HTTPException(status_code=404, detail="PDF not found.") from exc
+            return Response(
+                content=pdf_bytes,
+                media_type="application/pdf",
+                headers={"Cache-Control": "private, no-store"},
+            )
+
+        document = runtime.store.documents.get(document_key)
+        pdf_path = runtime.store.pdf_paths.get(document_key)
+        if not document or document.owner_id != user.id or not pdf_path or not pdf_path.is_file():
+            raise HTTPException(status_code=404, detail="PDF not found.")
+        return FileResponse(
+            pdf_path,
+            media_type="application/pdf",
+            filename=document.filename,
+            content_disposition_type="inline",
+            headers={"Cache-Control": "private, no-store"},
+        )
+
     @app.get("/api/jobs/{job_id}", response_model=JobSummary)
     async def get_job(
         job_id: str,
@@ -498,6 +720,80 @@ def create_app(
         if not job or job.owner_id != user.id:
             raise HTTPException(status_code=404, detail="Conversion job not found.")
         return _job_summary(job)
+
+    @app.post("/api/search", response_model=list[SearchResult])
+    async def search_documents(
+        payload: SearchRequest,
+        user: AuthenticatedUser = Depends(require_current_user),
+    ) -> list[SearchResult]:
+        query = payload.query.strip()
+        if not query:
+            raise HTTPException(status_code=422, detail="Search query cannot be empty.")
+        try:
+            return await runtime.search.search(
+                runtime.store,
+                user.id,
+                query,
+                str(payload.document_id) if payload.document_id else None,
+                payload.limit,
+                user.access_token,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except SupabaseStoreError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception("Search service is unavailable for user %s", user.id)
+            raise HTTPException(
+                status_code=503, detail="Search is temporarily unavailable."
+            ) from exc
+
+    @app.post("/api/indexing/backfill")
+    async def backfill_search_index(
+        limit: int = 10,
+        user: AuthenticatedUser = Depends(require_current_user),
+    ) -> dict[str, int]:
+        if not 1 <= limit <= 20:
+            raise HTTPException(status_code=422, detail="Backfill limit must be 1-20.")
+        if isinstance(runtime.store, SupabaseStore):
+            if not user.access_token:
+                raise HTTPException(status_code=503, detail="Supabase access token unavailable.")
+            try:
+                documents = await runtime.store.list_backfill_candidates(
+                    user.access_token, user.id, limit
+                )
+                extractions = await runtime.store.get_extractions(
+                    user.access_token,
+                    user.id,
+                    [document.id for document in documents],
+                )
+            except SupabaseStoreError as exc:
+                raise HTTPException(status_code=502, detail=str(exc)) from exc
+            candidates = [
+                document
+                for document in documents
+                if document.id not in runtime.indexing_document_ids
+                and document.id in extractions
+            ][:limit]
+            for document in candidates:
+                document.content = extractions[document.id]
+        else:
+            candidates = [
+                document
+                for document in runtime.store.documents.values()
+                if document.owner_id == user.id
+                and document.indexing_status in {"pending", "failed", "processing"}
+                and document.id not in runtime.indexing_document_ids
+                and document.content is not None
+            ][:limit]
+
+        for document in candidates:
+            task = asyncio.create_task(
+                _index_document(runtime, document, user.access_token)
+            )
+            runtime.tasks.add(task)
+            task.add_done_callback(runtime.tasks.discard)
+        return {"scheduled": len(candidates)}
 
     return app
 

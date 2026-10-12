@@ -1,15 +1,17 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 JobStatus = Literal["queued", "processing", "completed", "failed", "cancelled"]
+IndexingStatus = Literal["pending", "processing", "completed", "failed"]
 
 
 class ExtractedBlock(BaseModel):
     kind: str
     text: str
     page_numbers: list[int]
+    location_metadata: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ExtractedContent(BaseModel):
@@ -30,6 +32,9 @@ class DocumentSummary(BaseModel):
     error_message: str | None = None
     page_count: int | None = None
     processing_seconds: float | None = None
+    indexing_status: IndexingStatus = "pending"
+    indexed_chunks: int = 0
+    indexing_error: str | None = None
 
 
 class DocumentDetail(DocumentSummary):
@@ -43,3 +48,17 @@ class JobSummary(BaseModel):
     created_at: datetime
     updated_at: datetime
     error_message: str | None = None
+
+
+class SearchResult(BaseModel):
+    chunk_id: str
+    document_id: str
+    title: str
+    filename: str
+    excerpt: str
+    page_numbers: list[int]
+    location_metadata: list[dict[str, Any]]
+    score: float
+    semantic_rank: int | None = None
+    lexical_rank: int | None = None
+    retrieval_methods: list[str]

@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Bell, FileText, Search } from 'lucide-react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router'
 import { Button } from '../../components/ui/button'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '../../components/ui/sidebar'
 import { AppSidebar } from '../../components/app-sidebar'
 import { useAuth } from '../auth/auth-context'
-import { DocumentReaderPage } from './document-reader-page'
 import { LibraryPage } from './library-page'
 import { NotesPage } from './notes-page'
 import { ProtectedRoute } from './protected-route'
@@ -23,6 +22,10 @@ const pageTitles: Record<string, string> = {
   '/unauthorized': 'Access required',
   '/settings': 'Settings',
 }
+
+const DocumentReaderPage = lazy(() =>
+  import('./document-reader-page').then((module) => ({ default: module.DocumentReaderPage })),
+)
 
 export function AppShell() {
   const [signOutError, setSignOutError] = useState('')
@@ -162,7 +165,15 @@ export function AppShell() {
                 path="/documents/:documentId"
                 element={
                   <ProtectedRoute>
-                    <DocumentReaderPage />
+                    <Suspense
+                      fallback={
+                        <div className="p-8 text-sm text-muted-foreground" role="status">
+                          Opening document...
+                        </div>
+                      }
+                    >
+                      <DocumentReaderPage />
+                    </Suspense>
                   </ProtectedRoute>
                 }
               />

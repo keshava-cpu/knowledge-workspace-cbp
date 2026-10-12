@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Copy, Download, FileText, Info } from 'lucide-react'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { Button } from '../../components/ui/button'
@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '../../components/ui/dialog'
 import { Skeleton } from '../../components/ui/skeleton'
+import { PdfDocumentViewer } from './pdf-document-viewer'
 import { getDocument, type DocumentDetail, type ExtractedBlock } from '../lib/documents-api'
 
 function groupBlocksByPage(document: DocumentDetail) {
@@ -31,6 +32,7 @@ interface LoadState {
 
 export function DocumentReaderPage() {
   const { documentId } = useParams()
+  const [searchParams] = useSearchParams()
   const [state, setState] = useState<LoadState>({
     documentId: null,
     document: null,
@@ -203,6 +205,11 @@ export function DocumentReaderPage() {
           </dl>
         </DialogContent>
       </Dialog>
+
+      <PdfDocumentViewer
+        documentId={loadedDocument.id}
+        initialQuery={searchParams.get('q') ?? ''}
+      />
 
       {document.content?.blocks.length ? (
         <article className="mx-auto max-w-4xl py-8">

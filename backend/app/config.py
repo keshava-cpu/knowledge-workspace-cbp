@@ -19,6 +19,9 @@ class Settings:
     supabase_publishable_key: str | None = None
     supabase_persistence_enabled: bool = False
     temp_dir: Path | None = None
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_max_tokens: int = 256
+    embedding_batch_size: int = 32
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -43,4 +46,9 @@ class Settings:
             temp_dir=Path(os.environ["UPLOAD_TEMP_DIR"])
             if os.getenv("UPLOAD_TEMP_DIR")
             else None,
+            embedding_model=os.getenv(
+                "EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+            ),
+            embedding_max_tokens=int(os.getenv("EMBEDDING_MAX_TOKENS", "256")),
+            embedding_batch_size=int(os.getenv("EMBEDDING_BATCH_SIZE", "32")),
         )

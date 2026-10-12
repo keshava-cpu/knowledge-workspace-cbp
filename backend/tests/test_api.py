@@ -13,12 +13,13 @@ from app.auth import (
     SupabaseAuthVerifier,
 )
 from app.config import Settings
+from app.embeddings import EmbeddingService
 from app.docling_client import (
     DoclingServeClient,
     DoclingServeError,
     parse_conversion_result,
 )
-from app.main import create_app
+from app.main import _index_document, create_app
 
 
 class FakeDoclingClient:
@@ -74,6 +75,26 @@ class FakeDoclingClient:
         return self.result
 
 
+class FakeEmbeddingModel:
+    embedding_size = 384
+
+    def __init__(self) -> None:
+        self.embed_calls = 0
+
+    def token_count(self, text: str) -> int:
+        return len(text.split())
+
+    def embed(self, texts: list[str], batch_size: int = 32):
+        self.embed_calls += 1
+        vectors = []
+        for text in texts:
+            vector = [0.0] * self.embedding_size
+            for word in text.casefold().split():
+                vector[sum(ord(character) for character in word) % self.embedding_size] += 1.0
+            vectors.append(vector)
+        return vectors
+
+
 class FakeAuthVerifier:
     async def verify_access_token(self, access_token: str) -> AuthenticatedUser:
         users = {
@@ -100,7 +121,15 @@ def build_test_app(
         supabase_url="https://supabase.test",
         supabase_publishable_key="test-publishable-key",
     )
-    test_client = TestClient(create_app(settings, client, FakeAuthVerifier()))
+    embedding_service = EmbeddingService(
+        "sentence-transformers/all-MiniLM-L6-v2",
+        max_tokens=256,
+        batch_size=8,
+        model_factory=lambda _: FakeEmbeddingModel(),
+    )
+    test_client = TestClient(
+        create_app(settings, client, FakeAuthVerifier(), embedding_service)
+    )
     test_client.headers["Authorization"] = "Bearer alice-token"
     return test_client
 
@@ -174,9 +203,55 @@ def test_status_progresses_and_extracted_content_is_exposed() -> None:
             "kind": "heading",
             "text": "Extracted title",
             "page_numbers": [1],
+            "location_metadata": [{"page_no": 1}],
         }
         assert detail["content"]["blocks"][1]["page_numbers"] == [2]
         assert detail["page_count"] == 2
+
+
+def test_search_indexes_extraction_and_keeps_results_user_scoped() -> None:
+    with build_test_app(FakeDoclingClient()) as test_client:
+        submitted = test_client.post(
+            "/api/documents",
+            files={"file": ("paper.pdf", b"%PDF-1.7 content", "application/pdf")},
+        )
+        document_id = submitted.json()["id"]
+
+        for _ in range(100):
+            detail = test_client.get(f"/api/documents/{document_id}").json()
+            if detail["indexing_status"] in {"completed", "failed"}:
+                break
+            time.sleep(0.01)
+
+        assert detail["indexing_status"] == "completed"
+        response = test_client.post(
+            "/api/search",
+            json={"query": "actual extracted text", "document_id": document_id},
+        )
+        bob_response = test_client.post(
+            "/api/search",
+            headers={"Authorization": "Bearer bob-token"},
+            json={"query": "actual extracted text"},
+        )
+        runtime = test_client.app.state.runtime
+        model = runtime.embeddings._model
+        embed_calls_before_retry = model.embed_calls
+        asyncio.run(
+            _index_document(
+                runtime,
+                runtime.store.documents[document_id],
+                "alice-token",
+            )
+        )
+        assert model.embed_calls == embed_calls_before_retry
+
+    assert response.status_code == 200
+    assert response.json()[0]["document_id"] == document_id
+    assert response.json()[0]["page_numbers"] == [2]
+    assert response.json()[0]["location_metadata"] == [{"page_no": 2}]
+    assert "lexical" in response.json()[0]["retrieval_methods"]
+    assert bob_response.status_code == 200
+    assert bob_response.json() == []
 
 
 def test_handles_docling_failure_status() -> None:
@@ -254,7 +329,15 @@ def test_auth_configuration_missing_fails_closed() -> None:
         poll_interval_seconds=0.001,
         job_timeout_seconds=1,
     )
-    with TestClient(create_app(settings, FakeDoclingClient(), FakeAuthVerifier())) as test_client:
+    embedding_service = EmbeddingService(
+        "sentence-transformers/all-MiniLM-L6-v2",
+        max_tokens=256,
+        batch_size=8,
+        model_factory=lambda _: FakeEmbeddingModel(),
+    )
+    with TestClient(
+        create_app(settings, FakeDoclingClient(), FakeAuthVerifier(), embedding_service)
+    ) as test_client:
         response = test_client.get(
             "/api/documents", headers={"Authorization": "Bearer alice-token"}
         )
@@ -348,3 +431,23 @@ def test_can_delete_a_document_and_its_job() -> None:
     assert deleted.status_code == 200
     assert deleted.json() == {"deleted": True}
     assert missing.status_code == 404
+
+
+def test_serves_original_pdf_bytes_only_to_document_owner() -> None:
+    original_pdf = b"%PDF-1.7\nunchanged source bytes\n"
+    with build_test_app(FakeDoclingClient()) as test_client:
+        submitted = test_client.post(
+            "/api/documents",
+            files={"file": ("paper.pdf", original_pdf, "application/pdf")},
+        )
+        document_id = submitted.json()["id"]
+        owner_response = test_client.get(f"/api/documents/{document_id}/pdf")
+        other_user_response = test_client.get(
+            f"/api/documents/{document_id}/pdf",
+            headers={"Authorization": "Bearer bob-token"},
+        )
+
+    assert owner_response.status_code == 200
+    assert owner_response.content == original_pdf
+    assert owner_response.headers["content-type"] == "application/pdf"
+    assert other_user_response.status_code == 404

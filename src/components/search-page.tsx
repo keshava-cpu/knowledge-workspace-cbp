@@ -1,101 +1,234 @@
-import { useMemo, useState } from 'react'
-import { Search, Sparkles } from 'lucide-react'
-import { useSearchParams } from 'react-router'
+import { useEffect, useState } from 'react'
+import { LoaderCircle, Search } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router'
 import { Button } from '../../components/ui/button'
-import { searchResults } from '../data/sample-data'
+import {
+  listDocuments,
+  searchDocuments,
+  type DocumentSearchResult,
+  type DocumentSummary,
+} from '../lib/documents-api'
 
-const filters = ['All', 'Textbook', 'Research paper', 'Lecture notes'] as const
+type SearchScope = 'workspace' | 'document'
 
 export function SearchPage() {
   const [searchParams] = useSearchParams()
-  const [query, setQuery] = useState(
-    searchParams.get('q') || 'How does memory retrieval depend on context?',
-  )
-  const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>('All')
+  const [query, setQuery] = useState(searchParams.get('q') ?? '')
+  const [scope, setScope] = useState<SearchScope>('workspace')
+  const [selectedDocumentId, setSelectedDocumentId] = useState('')
+  const [documents, setDocuments] = useState<DocumentSummary[]>([])
+  const [searchState, setSearchState] = useState<{
+    key: string
+    results: DocumentSearchResult[]
+    error: string
+    loading: boolean
+  }>({ key: '', results: [], error: '', loading: false })
+  const [loadingDocuments, setLoadingDocuments] = useState(true)
+  const [documentsError, setDocumentsError] = useState('')
+  const normalizedQuery = query.trim()
+  const searchKey = `${normalizedQuery}\u0000${scope}\u0000${selectedDocumentId}`
+  const isCurrentSearch = searchState.key === searchKey
+  const results = isCurrentSearch ? searchState.results : []
+  const loading = isCurrentSearch && searchState.loading
+  const error = isCurrentSearch ? searchState.error : ''
 
-  const filteredResults = useMemo(() => {
-    return searchResults.filter((result) => {
-      const matchesFilter = activeFilter === 'All' || result.documentType === activeFilter
-      const matchesQuery =
-        query.trim() === '' ||
-        [result.title, result.section, result.excerpt].some((value) =>
-          value.toLowerCase().includes(query.toLowerCase()),
+  useEffect(() => {
+    const controller = new AbortController()
+    listDocuments(controller.signal)
+      .then(setDocuments)
+      .catch((requestError: unknown) => {
+        if (controller.signal.aborted) return
+        setDocumentsError(
+          requestError instanceof Error ? requestError.message : 'Could not load documents.',
         )
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingDocuments(false)
+      })
+    return () => controller.abort()
+  }, [])
 
-      return matchesFilter && matchesQuery
-    })
-  }, [activeFilter, query])
+  useEffect(() => {
+    if (!normalizedQuery || (scope === 'document' && !selectedDocumentId)) {
+      return
+    }
+
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      setSearchState({ key: searchKey, results: [], error: '', loading: true })
+      searchDocuments(
+        normalizedQuery,
+        { documentId: scope === 'document' ? selectedDocumentId : undefined },
+        controller.signal,
+      )
+        .then((items) => {
+          setSearchState({ key: searchKey, results: items, error: '', loading: false })
+        })
+        .catch((requestError: unknown) => {
+          if (controller.signal.aborted) return
+          setSearchState({
+            key: searchKey,
+            results: [],
+            error: requestError instanceof Error ? requestError.message : 'Search failed.',
+            loading: false,
+          })
+        })
+    }, 280)
+
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [normalizedQuery, scope, selectedDocumentId, searchKey])
+
+  const searchableDocuments = documents.filter(
+    (document) => document.status === 'completed' && document.indexing_status === 'completed',
+  )
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="rounded-2xl border border-indigo-400/20 bg-[#0d1117] p-5 shadow-[0_0_0_1px_rgba(99,102,241,0.1)]">
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-          <Search className="h-5 w-5 text-indigo-300" />
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+      <header className="border-b border-border pb-5">
+        <p className="text-xs font-medium uppercase text-muted-foreground">Passage retrieval</p>
+        <h2 className="mt-2 text-2xl font-semibold text-foreground">Search your library</h2>
+      </header>
+
+      <section className="border-b border-border py-5" aria-label="Search controls">
+        <label className="flex items-center gap-3 border border-input bg-card px-4 py-3">
+          <Search className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            aria-label="Search knowledge base"
-            placeholder="Ask a question, concept, or topic"
-            className="w-full bg-transparent text-base text-zinc-100 placeholder:text-zinc-500 focus:outline-none"
+            aria-label="Search passages"
+            placeholder="Search concepts, exact phrases, or questions"
+            autoComplete="off"
+            className="min-w-0 flex-1 bg-transparent text-base text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
-        </div>
+          {loading && (
+            <LoaderCircle
+              className="size-4 animate-spin text-muted-foreground"
+              aria-label="Searching"
+            />
+          )}
+        </label>
 
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap gap-2">
-            {filters.map((filter) => (
-              <Button
-                key={filter}
-                variant={activeFilter === filter ? 'default' : 'secondary'}
-                size="sm"
-                onClick={() => setActiveFilter(filter)}
-                className={
-                  activeFilter === filter ? 'bg-indigo-500 text-white hover:bg-indigo-400' : ''
-                }
-              >
-                {filter}
-              </Button>
-            ))}
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div
+            className="inline-flex border border-border p-1"
+            role="group"
+            aria-label="Search scope"
+          >
+            <Button
+              type="button"
+              variant={scope === 'workspace' ? 'default' : 'ghost'}
+              size="sm"
+              aria-pressed={scope === 'workspace'}
+              onClick={() => setScope('workspace')}
+            >
+              Workspace
+            </Button>
+            <Button
+              type="button"
+              variant={scope === 'document' ? 'default' : 'ghost'}
+              size="sm"
+              aria-pressed={scope === 'document'}
+              onClick={() => setScope('document')}
+            >
+              One document
+            </Button>
           </div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-amber-200">
-            <Sparkles className="h-3 w-3" />
-            Demo data only
+
+          {scope === 'document' && (
+            <label className="flex min-w-56 flex-1 items-center gap-2 text-sm text-muted-foreground">
+              <span className="sr-only">Choose a document</span>
+              <select
+                value={selectedDocumentId}
+                onChange={(event) => setSelectedDocumentId(event.target.value)}
+                disabled={loadingDocuments || searchableDocuments.length === 0}
+                className="h-9 w-full min-w-0 border border-input bg-card px-3 text-sm text-foreground"
+              >
+                <option value="">
+                  {loadingDocuments
+                    ? 'Loading documents...'
+                    : searchableDocuments.length
+                      ? 'Choose an indexed document'
+                      : 'No indexed documents'}
+                </option>
+                {searchableDocuments.map((document) => (
+                  <option key={document.id} value={document.id}>
+                    {document.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <span className="text-xs text-muted-foreground" aria-live="polite">
+            {loading
+              ? 'Searching passages'
+              : `${results.length} ${results.length === 1 ? 'passage' : 'passages'}`}
           </span>
         </div>
-      </div>
+      </section>
 
-      <div className="mt-6 space-y-4">
-        {filteredResults.map((result) => (
-          <article
-            key={result.id}
-            className="rounded-2xl border border-white/10 bg-[#10151c] p-4 transition-colors hover:border-indigo-400/30"
-          >
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs uppercase tracking-[0.2em] text-zinc-500">
-              <span>{result.documentType}</span>
-              <span className="rounded-full border border-indigo-400/20 bg-indigo-500/8 px-2 py-1 text-[10px] text-indigo-200">
-                {result.matchType}
-              </span>
-            </div>
+      <section className="divide-y divide-border" aria-label="Search results" aria-live="polite">
+        {error && (
+          <p role="alert" className="border-b border-destructive/30 py-5 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        {documentsError && (
+          <p role="alert" className="border-b border-destructive/30 py-5 text-sm text-destructive">
+            {documentsError}
+          </p>
+        )}
 
-            <div className="mb-2 flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-medium text-white">{result.title}</h3>
-                <p className="mt-1 text-sm text-zinc-400">{result.section}</p>
+        {results.map((result) => (
+          <article key={result.chunk_id} className="py-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Link
+                  to={`/documents/${encodeURIComponent(result.document_id)}?q=${encodeURIComponent(query.trim())}`}
+                  className="font-medium text-foreground underline-offset-4 hover:underline"
+                >
+                  {result.title}
+                </Link>
+                <p className="mt-1 break-all text-xs text-muted-foreground">{result.filename}</p>
               </div>
-              <span className="rounded-lg bg-white/[0.03] px-2 py-1 text-xs text-zinc-300">
-                {result.page}
-              </span>
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 text-xs">
+                <span className="text-muted-foreground">
+                  {result.page_numbers.length
+                    ? result.page_numbers.map((page) => `p. ${page}`).join(' · ')
+                    : 'Page unavailable'}
+                </span>
+                {result.retrieval_methods.map((method) => (
+                  <span
+                    key={method}
+                    className="border border-border px-2 py-1 text-muted-foreground"
+                  >
+                    {method === 'semantic' ? 'Semantic' : 'Text match'}
+                  </span>
+                ))}
+              </div>
             </div>
-
-            <p className="text-[15px] leading-7 text-zinc-200">{result.excerpt}</p>
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-foreground/85">
+              {result.excerpt}
+            </p>
           </article>
         ))}
-      </div>
 
-      {filteredResults.length === 0 && (
-        <div className="mt-6 rounded-2xl border border-dashed border-white/10 bg-[#10151c] p-8 text-center text-zinc-400">
-          No demonstration results match that query yet.
-        </div>
-      )}
+        {!loading && !error && query.trim() && results.length === 0 && (
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            {scope === 'document' && !selectedDocumentId
+              ? 'Choose an indexed document to search within it.'
+              : 'No passages matched this query.'}
+          </p>
+        )}
+        {!query.trim() && (
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            Enter a query to retrieve passages from your indexed documents.
+          </p>
+        )}
+      </section>
     </div>
   )
 }

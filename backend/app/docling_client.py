@@ -163,6 +163,11 @@ def _extract_blocks(document_json: Any) -> list[ExtractedBlock]:
                     kind=kind,
                     text=text.strip(),
                     page_numbers=_page_numbers(node),
+                    location_metadata=[
+                        provenance
+                        for provenance in node.get("prov", [])
+                        if isinstance(provenance, dict)
+                    ],
                 )
             )
             return

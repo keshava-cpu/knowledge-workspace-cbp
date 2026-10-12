@@ -50,7 +50,7 @@ The backend verifies each bearer token by requesting the authenticated user from
 
 ## Database migrations
 
-The repository includes `supabase/config.toml` and versioned migrations under `supabase/migrations/`. They create the private PDF bucket, user-owned document metadata, processing jobs, persisted Docling extraction results, cancellation support, and secure self-service account deletion. RLS scopes table and Storage access to the authenticated user's ID.
+The repository includes `supabase/config.toml` and versioned migrations under `supabase/migrations/`. They create the private PDF bucket, user-owned document metadata, processing jobs, persisted Docling extraction results, cancellation support, secure self-service account deletion, and the 384-dimensional hybrid-search index. RLS scopes chunks and documents to the authenticated user's ID.
 
 Review the migration locally without changing the remote project:
 
@@ -68,7 +68,7 @@ npx supabase db push --dry-run
 npx supabase db push
 ```
 
-The current migration chain includes the initial storage schema, the `cancelled` processing status, and the `delete_my_account()` RPC used by Settings. Use `npx supabase migration list --linked` to compare local and remote history.
+The current migration chain includes the initial storage schema, the `cancelled` processing status, the `delete_my_account()` RPC used by Settings, and `document_chunks` with HNSW cosine and GIN full-text indexes plus `search_document_chunks()`. Use `npx supabase migration list --linked` to compare local and remote history.
 
 `db push` is the deployment step. The linked project has the current migration chain applied. The migration creates the Storage bucket, so no separate bucket is required in the Dashboard. Keep it private and use object paths in the form `<auth-user-id>/<document-id>.pdf`.
 
@@ -76,6 +76,7 @@ Set `SUPABASE_PERSISTENCE_ENABLED=true` to use the integrated user-token-backed 
 
 - Frontend: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_API_PROXY_TARGET`
 - Backend: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_PERSISTENCE_ENABLED`, `DOCLING_SERVE_URL`, optional `DOCLING_SERVE_API_KEY`, `MAX_UPLOAD_BYTES`, `DOCLING_POLL_INTERVAL_SECONDS`, `DOCLING_JOB_TIMEOUT_SECONDS`, and optional `UPLOAD_TEMP_DIR`
+- Search/model: `EMBEDDING_MODEL` (default `sentence-transformers/all-MiniLM-L6-v2`), `EMBEDDING_MAX_TOKENS` (default `256`, maximum `256`), and `EMBEDDING_BATCH_SIZE` (default `32`). The current migration requires 384-dimensional vectors.
 
 ## Google Cloud and Supabase setup
 
@@ -132,16 +133,24 @@ npm run format:check
 npm run backend:test
 ```
 
-Backend tests cover token requirement and verification boundary, auth-service failure, document/job owner isolation, PDF validation, Docling error handling, conversion status and extraction mapping. The Google OAuth callback/session and logout still require a configured Supabase project and Google test account for a live browser sign-in.
+Backend tests cover token verification, owner isolation, original PDF byte preservation, Docling extraction provenance, chunk token bounds, indexing idempotence, and authenticated hybrid search. The PDF viewer POC uses stable EmbedPDF v2 and was browser-tested with mixed-size PDFs. The Google OAuth callback/session and logout still require a configured Supabase project and Google test account for a live browser sign-in.
 
 **Live Google OAuth status: unverified.** This checkout has no configured Supabase URL, publishable key, Google client ID or client secret. Do not interpret passing builds or mocked auth tests as a successful Google login. After setup, test Google consent/cancel, callback restoration, email/password sign-in, protected-route redirect, sign-out, and a second user's inability to read the first user's documents/jobs.
 
+## Search and PDF reading
+
+- Successful extraction is indexed once in resumable, idempotent batches; search does not rerun Docling or re-embed document chunks.
+- Search combines exact phrase, PostgreSQL full-text, and pgvector semantic ranks using reciprocal-rank fusion with $k=60$. Its authenticated-only search RPC derives ownership from `auth.uid()`; it has no caller-supplied owner ID, while table RLS remains enabled. It returns at most 20 excerpts. It does not generate answers; FreeLLMAPI is a later milestone.
+- `POST /api/search` accepts `query`, optional `document_id`, and a result limit from 1 to 20. `POST /api/indexing/backfill?limit=N` schedules a controlled backfill of at most 20 already-extracted documents per call.
+- The reader serves original PDF bytes through an authenticated endpoint and never marks search text inside the PDF. Result markers and excerpts are separate UI; page-level rail markers track manual scrolling, page navigation and zoom.
+- See [Architecture](docs/ARCHITECTURE.md) for the rank-fusion formula and synthetic benchmark measurements/limitations.
+
 ## API and persistence limits
 
-- `POST /api/documents`, `GET /api/documents`, `GET /api/documents/{id}` and `GET /api/jobs/{id}` require a Supabase access token.
+- `POST /api/documents`, document/PDF reads, `POST /api/search`, `POST /api/indexing/backfill`, and job reads require a Supabase access token.
 - FastAPI derives the owner ID from the user record returned by Supabase Auth. Request parameters and frontend profile data are never used as the owner identity.
 - With `SUPABASE_PERSISTENCE_ENABLED=true`, documents, jobs, extraction results, and PDF objects are persisted through the user-scoped Supabase APIs. With it false, the backend uses process memory and temporary files.
-- The extracted reader displays Docling’s Markdown/structured text, not a rendered PDF. Semantic search, embeddings, an LLM assistant and handwritten OCR are out of scope.
+- Search quality and timings against representative user documents remain to be measured. The application does not generate synthesized answers or run handwritten OCR.
 
 ## Common setup errors
 
