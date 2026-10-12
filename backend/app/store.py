@@ -160,7 +160,7 @@ class InMemoryStore:
                 lexical_rank=item.get("lexical_rank"),
                 retrieval_methods=item["methods"],
             )
-            for item in ordered[:limit]
+            for item in ordered[:candidate_limit]
         ]
 
     @staticmethod
@@ -491,7 +491,7 @@ class SupabaseStore(InMemoryStore):
                 "p_query_embedding": embedding,
                 "p_embedding_model": embedding_model,
                 "p_document_id": document_id,
-                "p_result_limit": limit,
+                "p_result_limit": candidate_limit,
                 "p_candidate_limit": candidate_limit,
             },
         )

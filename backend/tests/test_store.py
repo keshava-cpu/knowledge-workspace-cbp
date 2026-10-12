@@ -73,7 +73,7 @@ def test_supabase_hybrid_search_uses_one_authenticated_bounded_rpc() -> None:
         assert payload["p_query_text"] == "retrieval context"
         assert payload["p_embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
         assert payload["p_document_id"] == "document-id"
-        assert payload["p_result_limit"] == 7
+        assert payload["p_result_limit"] == 80
         assert len(payload["p_query_embedding"]) == 384
         return httpx.Response(
             200,
@@ -87,6 +87,7 @@ def test_supabase_hybrid_search_uses_one_authenticated_bounded_rpc() -> None:
                     "page_numbers": [3],
                     "location_metadata": [{"page_no": 3}],
                     "score": 0.03,
+                    "semantic_similarity": 0.72,
                     "semantic_rank": 1,
                     "lexical_rank": 2,
                     "retrieval_methods": ["semantic", "exact"],
@@ -115,4 +116,5 @@ def test_supabase_hybrid_search_uses_one_authenticated_bounded_rpc() -> None:
     assert len(requests) == 1
     assert results[0].page_numbers == [3]
     assert results[0].location_metadata == [{"page_no": 3}]
+    assert results[0].semantic_similarity == 0.72
     assert results[0].retrieval_methods == ["semantic", "exact"]

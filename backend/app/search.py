@@ -23,7 +23,7 @@ class SearchService:
         embeddings: EmbeddingService,
         ttl_seconds: float = 30,
         cache_size: int = 256,
-        candidate_limit: int = 80,
+        candidate_limit: int = 40,
     ) -> None:
         self.embeddings = embeddings
         self.ttl_seconds = ttl_seconds
@@ -55,6 +55,7 @@ class SearchService:
 
         started = time.perf_counter()
         query_embedding = await asyncio.to_thread(self.embeddings.embed_query, normalized_query)
+        candidate_pool = min(max(limit, self.candidate_limit, 10), 100)
         if isinstance(store, SupabaseStore):
             if not access_token:
                 raise ValueError("Verified Supabase access token is unavailable.")
@@ -65,7 +66,7 @@ class SearchService:
                 self.embeddings.model_name,
                 document_id,
                 limit,
-                self.candidate_limit,
+                candidate_pool,
                 access_token,
             )
         else:
@@ -76,8 +77,19 @@ class SearchService:
                 self.embeddings.model_name,
                 document_id,
                 limit,
-                self.candidate_limit,
+                candidate_pool,
             )
+
+        # Deduplicate the deeper ranked pool before applying the API result limit.
+        seen_content: set[str] = set()
+        deduped: list[SearchResult] = []
+        for result in results:
+            fingerprint = normalize_embedding_text(result.excerpt).casefold()
+            if fingerprint in seen_content:
+                continue
+            seen_content.add(fingerprint)
+            deduped.append(result)
+        results = deduped[:limit]
 
         if self.cache_size:
             self._cache[cache_key] = SearchCacheEntry(
