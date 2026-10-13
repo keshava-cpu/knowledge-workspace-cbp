@@ -28,10 +28,15 @@ const logger = new ConsoleLogger()
 
 interface PdfDocumentViewerProps {
   documentId: string
-  initialQuery: string
+  initialQuery?: string
+  initialPage?: number
 }
 
-export function PdfDocumentViewer({ documentId, initialQuery }: PdfDocumentViewerProps) {
+export function PdfDocumentViewer({
+  documentId,
+  initialQuery = '',
+  initialPage,
+}: PdfDocumentViewerProps) {
   const [query, setQuery] = useState(initialQuery)
   const [pdfUrl, setPdfUrl] = useState('')
   const [pdfError, setPdfError] = useState('')
@@ -140,7 +145,7 @@ export function PdfDocumentViewer({ documentId, initialQuery }: PdfDocumentViewe
   }
 
   return (
-    <section className="mt-8" aria-label="PDF reader and search results">
+    <section className="mt-2" aria-label="PDF reader and search results">
       {engineLoading && (
         <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
           <LoaderCircle className="mr-2 size-4 animate-spin" aria-hidden="true" />
@@ -173,6 +178,7 @@ export function PdfDocumentViewer({ documentId, initialQuery }: PdfDocumentViewe
                       searchError={searchError}
                       results={results}
                       onFirstPageRender={handleFirstPageRender}
+                      initialPage={initialPage}
                     />
                   ) : isError ? (
                     <p

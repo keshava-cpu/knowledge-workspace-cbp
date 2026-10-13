@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Copy, Download, FileText, Info } from 'lucide-react'
-import { Link, useParams, useSearchParams } from 'react-router'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import { ArrowLeft, BookOpenText, Copy, Download, FileText, Info } from 'lucide-react'
+import { Link, useParams } from 'react-router'
 import { Button } from '../../components/ui/button'
 import {
   Dialog,
@@ -12,7 +10,6 @@ import {
   DialogTitle,
 } from '../../components/ui/dialog'
 import { Skeleton } from '../../components/ui/skeleton'
-import { PdfDocumentViewer } from './pdf-document-viewer'
 import { getDocument, type DocumentDetail, type ExtractedBlock } from '../lib/documents-api'
 
 function groupBlocksByPage(document: DocumentDetail) {
@@ -32,7 +29,6 @@ interface LoadState {
 
 export function DocumentReaderPage() {
   const { documentId } = useParams()
-  const [searchParams] = useSearchParams()
   const [state, setState] = useState<LoadState>({
     documentId: null,
     document: null,
@@ -133,47 +129,56 @@ export function DocumentReaderPage() {
       <header className="mt-7 border-b border-white/10 pb-6">
         <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-emerald-300">
           <FileText className="h-4 w-4" />
-          Extracted document text
+          Parsed document
         </div>
         <h2 className="mt-3 break-words text-3xl font-semibold text-white">{document.title}</h2>
         <p className="mt-2 break-all text-sm text-zinc-400">{document.filename}</p>
-        <p className="mt-4 max-w-3xl text-xs leading-5 text-zinc-500">
-          This view presents text and structure extracted from the PDF. It is not a rendered PDF.
-          Source-page references are shown where Docling provides them.
-        </p>
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <div
-            className="flex items-center gap-1 rounded-md border border-border bg-muted p-1"
+            className="flex flex-wrap items-center gap-2"
             role="group"
             aria-label="Document actions"
           >
             <Button
-              variant="ghost"
+              variant="default"
               size="sm"
-              onClick={() => void copyExtractedText()}
-              disabled={!extractedText}
+              asChild
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium shadow"
             >
-              <Copy />
-              Copy text
+              <Link to={`/reader/${encodeURIComponent(loadedDocument.id)}`}>
+                <BookOpenText className="mr-1.5 size-4" />
+                Open in PDF Reader
+              </Link>
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={downloadMarkdown}
-              disabled={!document.content?.markdown}
-            >
-              <Download />
-              Download Markdown
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setShowInfo(true)}
-              aria-label="Show document information"
-              title="Document information"
-            >
-              <Info />
-            </Button>
+            <div className="flex items-center gap-1 rounded-md border border-border bg-muted p-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void copyExtractedText()}
+                disabled={!extractedText}
+              >
+                <Copy />
+                Copy text
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={downloadMarkdown}
+                disabled={!document.content?.markdown}
+              >
+                <Download />
+                Download Markdown
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setShowInfo(true)}
+                aria-label="Show document information"
+                title="Document information"
+              >
+                <Info />
+              </Button>
+            </div>
           </div>
           <span className="text-xs text-muted-foreground" aria-live="polite">
             {actionMessage}
@@ -202,92 +207,58 @@ export function DocumentReaderPage() {
             </dd>
             <dt className="text-muted-foreground">Status</dt>
             <dd className="text-right capitalize">{document.status}</dd>
+            <dt className="text-muted-foreground">Indexed chunks</dt>
+            <dd className="text-right">{document.indexed_chunks}</dd>
           </dl>
         </DialogContent>
       </Dialog>
 
-      <PdfDocumentViewer
-        documentId={loadedDocument.id}
-        initialQuery={searchParams.get('q') ?? ''}
-      />
-
+      {/* Structured text extracted by Docling — available for export and copy.
+          The PDF viewer has been moved to the dedicated Reader page for full view. */}
       {document.content?.blocks.length ? (
-        <article className="mx-auto max-w-4xl py-8">
-          <Tabs defaultValue="text">
-            <TabsList className="mb-6">
-              <TabsTrigger value="text">Structured text</TabsTrigger>
-              <TabsTrigger value="markdown">Markdown</TabsTrigger>
-              <TabsTrigger value="structure">Structure JSON</TabsTrigger>
-            </TabsList>
-            <TabsContent value="text" className="space-y-8">
-              {groupBlocksByPage(document).map(([page, blocks]) => (
-                <section key={page} className="border-l-2 border-indigo-400/40 pl-5">
-                  <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-indigo-300">
-                    {page === 'Unreferenced'
-                      ? page
-                      : `Source page${page.includes(',') ? 's' : ''} ${page}`}
-                  </p>
-                  <div className="space-y-5">
-                    {blocks.map((block, index) =>
-                      block.kind === 'heading' ? (
-                        <h3
-                          key={`${page}-${index}`}
-                          className="text-xl font-semibold text-zinc-100"
-                        >
-                          {block.text}
-                        </h3>
-                      ) : (
-                        <p
-                          key={`${page}-${index}`}
-                          className="whitespace-pre-wrap text-[15px] leading-7 text-zinc-300"
-                        >
-                          {block.text}
-                        </p>
-                      ),
-                    )}
-                  </div>
-                </section>
-              ))}
-            </TabsContent>
-            <TabsContent value="markdown">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Full extracted Markdown</CardTitle>
-                  <CardDescription>The Markdown returned by Docling.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <pre className="overflow-x-auto whitespace-pre-wrap font-sans text-sm leading-6 text-zinc-400">
-                    {document.content.markdown}
-                  </pre>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="structure">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Structured extraction</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <pre className="max-h-[36rem] overflow-auto whitespace-pre-wrap text-xs leading-5 text-zinc-400">
-                    {JSON.stringify(document.content.structured_json, null, 2)}
-                  </pre>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+        <article className="mx-auto max-w-4xl py-8" aria-label="Extracted text">
+          <h3 className="mb-6 text-xs font-medium uppercase tracking-[0.18em] text-indigo-300">
+            Extracted text (by page)
+          </h3>
+          <div className="space-y-8">
+            {groupBlocksByPage(document).map(([page, blocks]) => (
+              <section key={page} className="border-l-2 border-indigo-400/40 pl-5">
+                <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-indigo-300">
+                  {page === 'Unreferenced'
+                    ? page
+                    : `Source page${page.includes(',') ? 's' : ''} ${page}`}
+                </p>
+                <div className="space-y-5">
+                  {blocks.map((block, index) =>
+                    block.kind === 'heading' ? (
+                      <h4 key={`${page}-${index}`} className="text-xl font-semibold text-zinc-100">
+                        {block.text}
+                      </h4>
+                    ) : (
+                      <p
+                        key={`${page}-${index}`}
+                        className="whitespace-pre-wrap text-[15px] leading-7 text-zinc-300"
+                      >
+                        {block.text}
+                      </p>
+                    ),
+                  )}
+                </div>
+              </section>
+            ))}
+          </div>
         </article>
       ) : document.content?.markdown ? (
         <article className="mx-auto max-w-3xl py-8">
-          <h3 className="mb-4 text-xs uppercase tracking-[0.18em] text-zinc-500">
-            Extracted Markdown
-          </h3>
-          <pre className="overflow-x-auto whitespace-pre-wrap font-sans text-[15px] leading-7 text-zinc-300">
-            {document.content.markdown}
-          </pre>
+          <div className="border border-white/10 bg-white/[0.02] p-6">
+            <pre className="whitespace-pre-wrap text-sm text-zinc-300">
+              {document.content.markdown}
+            </pre>
+          </div>
         </article>
       ) : (
-        <p className="mt-8 text-sm text-zinc-400">
-          No extracted text was returned for this document.
+        <p className="py-12 text-center text-sm text-muted-foreground">
+          This document does not contain extracted blocks or text yet.
         </p>
       )}
     </main>

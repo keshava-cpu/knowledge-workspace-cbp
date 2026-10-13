@@ -1,0 +1,549 @@
+{
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "embedding_dimensions": 384,
+  "documents": [
+    {
+      "id": "doc-mesi",
+      "title": "MESI Cache Coherence",
+      "filename": "mesi-cache-coherence.pdf",
+      "passages": [
+        {
+          "id": "mesi-invalidation",
+          "page_numbers": [2],
+          "text": "The MESI cache-coherence protocol assigns each cache line one of four states: Modified, Exclusive, Shared, or Invalid. When a processor writes to a shared line, it broadcasts an invalidation message so other caches discard their copies before the write proceeds.",
+          "evidence": "broadcasts an invalidation message"
+        },
+        {
+          "id": "mesi-writeback",
+          "page_numbers": [3],
+          "text": "A Modified MESI cache line contains newer data than main memory and is therefore dirty. The owning cache must write the modified line back to main memory before eviction. An Exclusive line is clean and has no other cached copies.",
+          "evidence": "write the modified line back to main memory before eviction"
+        },
+        {
+          "id": "mesi-exclusive-after-invalidation",
+          "page_numbers": [6],
+          "text": "The MESI cache protocol records a state for each cache line. When a processor writes to a shared line, it broadcasts an invalidation message so other caches discard their copies before the write proceeds. The writing cache then holds the exclusive valid copy.",
+          "evidence": "The writing cache then holds the exclusive valid copy"
+        },
+        {
+          "id": "mesi-modified-after-write",
+          "page_numbers": [7],
+          "text": "The MESI cache protocol records a state for each cache line. When a processor writes to a shared line, it broadcasts an invalidation message so other caches discard their copies before the write proceeds. The line is marked Modified after the write and must be written back later.",
+          "evidence": "The line is marked Modified after the write"
+        }
+      ]
+    },
+    {
+      "id": "doc-mesi-duplicate",
+      "title": "MESI Lecture Notes",
+      "filename": "mesi-lecture-notes.pdf",
+      "passages": [
+        {
+          "id": "mesi-invalidation-copy",
+          "page_numbers": [9],
+          "duplicate_of": "mesi-invalidation",
+          "text": "The MESI cache-coherence protocol assigns each cache line one of four states: Modified, Exclusive, Shared, or Invalid. When a processor writes to a shared line, it broadcasts an invalidation message so other caches discard their copies before the write proceeds.",
+          "evidence": "broadcasts an invalidation message"
+        }
+      ]
+    },
+    {
+      "id": "doc-raft",
+      "title": "Raft Consensus",
+      "filename": "raft-consensus.pdf",
+      "passages": [
+        {
+          "id": "raft-election",
+          "page_numbers": [4],
+          "text": "In Raft, a follower starts an election after its randomized election timeout expires without receiving a leader heartbeat. It becomes a candidate, requests votes, and needs votes from a majority of the cluster to become leader.",
+          "evidence": "needs votes from a majority of the cluster"
+        },
+        {
+          "id": "raft-commit",
+          "page_numbers": [5],
+          "text": "The Raft leader sends log entries to followers in AppendEntries RPCs. The leader commits an entry after a majority of servers have replicated it, then advances its commit index and applies the entry to its state machine.",
+          "evidence": "commits an entry after a majority of servers have replicated it"
+        }
+      ]
+    },
+    {
+      "id": "doc-huffman",
+      "title": "Huffman Coding",
+      "filename": "huffman-coding.pdf",
+      "passages": [
+        {
+          "id": "huffman-construction",
+          "page_numbers": [11],
+          "text": "Huffman coding repeatedly combines the two lowest-frequency nodes in a binary tree. The resulting variable-length code is prefix-free and minimizes the weighted average code length for the supplied symbol frequencies.",
+          "evidence": "combines the two lowest-frequency nodes"
+        },
+        {
+          "id": "huffman-canonical",
+          "page_numbers": [12],
+          "text": "Canonical Huffman coding assigns codes from code lengths and symbol order rather than storing each tree edge. A decoder can reconstruct the same prefix-free code table from the ordered symbol lengths.",
+          "evidence": "assigns codes from code lengths and symbol order"
+        }
+      ]
+    },
+    {
+      "id": "doc-dijkstra",
+      "title": "Dijkstra Shortest Paths",
+      "filename": "dijkstra-shortest-paths.pdf",
+      "passages": [
+        {
+          "id": "dijkstra-negative-edges",
+          "page_numbers": [7],
+          "text": "Dijkstra's shortest-path algorithm requires all edge weights to be nonnegative. With a negative edge, a vertex settled as the current minimum can later receive a shorter path, so the greedy finalization step is no longer correct.",
+          "evidence": "requires all edge weights to be nonnegative"
+        },
+        {
+          "id": "dijkstra-relaxation",
+          "page_numbers": [8],
+          "text": "For each edge from the selected vertex to a neighbor, Dijkstra's algorithm relaxes the edge by comparing the current distance with the selected distance plus the edge weight. A priority queue selects the unsettled vertex with the smallest tentative distance.",
+          "evidence": "relaxes the edge by comparing the current distance"
+        }
+      ]
+    },
+    {
+      "id": "doc-tcp",
+      "title": "TCP Reliability and Congestion Control",
+      "filename": "tcp-reliability.pdf",
+      "passages": [
+        {
+          "id": "tcp-retransmission-timeout",
+          "page_numbers": [20],
+          "text": "TCP starts a retransmission timer when it sends data that has not yet been acknowledged. If the retransmission timeout expires, TCP retransmits the unacknowledged segment and updates its estimate of the round-trip time.",
+          "evidence": "retransmission timeout expires"
+        },
+        {
+          "id": "tcp-slow-start",
+          "page_numbers": [21],
+          "text": "During TCP slow start, the congestion window grows as acknowledgments arrive, approximately doubling each round-trip time until the threshold or a loss event changes the congestion-control phase.",
+          "evidence": "congestion window grows as acknowledgments arrive"
+        }
+      ]
+    },
+    {
+      "id": "doc-bloom",
+      "title": "Bloom Filters",
+      "filename": "bloom-filters.pdf",
+      "passages": [
+        {
+          "id": "bloom-membership",
+          "page_numbers": [14],
+          "text": "A Bloom filter represents set membership with a bit array and several hash functions. To insert an item, it sets the bits selected by those hashes. A query that finds any required bit clear proves the item is absent; a query with all bits set may be a false positive.",
+          "evidence": "a query with all bits set may be a false positive"
+        },
+        {
+          "id": "bloom-sizing",
+          "page_numbers": [15],
+          "text": "For a Bloom filter with m bits, n inserted items, and k independent hash functions, the approximate false-positive probability is (1 - exp(-k*n/m))^k. Increasing the bit budget per item can reduce false positives, while too many hash functions set bits more quickly.",
+          "evidence": "the approximate false-positive probability is (1 - exp(-k*n/m))^k"
+        }
+      ]
+    },
+    {
+      "id": "doc-btree",
+      "title": "B-Tree and B+ Tree Indexes",
+      "filename": "btree-indexes.pdf",
+      "passages": [
+        {
+          "id": "btree-search",
+          "page_numbers": [22],
+          "text": "A B-tree stores sorted keys in nodes and uses separator keys in internal nodes to choose the child interval that may contain a search key. Each descent narrows the key range, so lookup visits a path from the root toward a matching leaf.",
+          "evidence": "separator keys in internal nodes to choose the child interval"
+        },
+        {
+          "id": "btree-leaf-scan",
+          "page_numbers": [23],
+          "text": "In a B+ tree, records or record pointers are stored at the leaves, and adjacent leaves are linked in key order. After locating the first key in a range, a scan follows those leaf links instead of returning to the root for every next key.",
+          "evidence": "a scan follows those leaf links"
+        }
+      ]
+    },
+    {
+      "id": "doc-tls",
+      "title": "TLS 1.3 Handshake",
+      "filename": "tls-13-handshake.pdf",
+      "passages": [
+        {
+          "id": "tls-key-agreement",
+          "page_numbers": [31],
+          "text": "In a TLS 1.3 full handshake, the client and server can use ephemeral Diffie-Hellman key shares to derive a shared secret. Fresh ephemeral keys provide forward secrecy against later compromise of the server's long-term certificate key.",
+          "evidence": "ephemeral Diffie-Hellman key shares to derive a shared secret"
+        },
+        {
+          "id": "tls-finished",
+          "page_numbers": [32],
+          "text": "Each TLS 1.3 peer sends a Finished message containing verify_data derived from the handshake traffic secret and transcript hash. The receiver checks it to authenticate the handshake transcript and confirm both sides derived matching keys.",
+          "evidence": "verify_data derived from the handshake traffic secret and transcript hash"
+        }
+      ]
+    },
+    {
+      "id": "doc-quicksort",
+      "title": "Quicksort",
+      "filename": "quicksort.pdf",
+      "passages": [
+        {
+          "id": "quicksort-partition",
+          "page_numbers": [40],
+          "text": "Quicksort partitions an array around a pivot so values on one side compare before the pivot and values on the other side compare after it. It then recursively sorts the partitions. Highly unbalanced partitions can produce quadratic worst-case running time.",
+          "evidence": "Highly unbalanced partitions can produce quadratic worst-case running time"
+        },
+        {
+          "id": "quicksort-randomized",
+          "page_numbers": [41],
+          "text": "Randomized quicksort chooses a pivot at random, making consistently unbalanced partitions unlikely for a fixed input order. Its expected running time is O(n log n), although its worst case remains O(n^2).",
+          "evidence": "Its expected running time is O(n log n)"
+        }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "id": "mesi-exact-terms",
+      "kind": "exact_terms",
+      "query": "MESI Modified Exclusive Shared Invalid cache coherence invalidation",
+      "expected": [
+        { "passage_id": "mesi-invalidation", "evidence": "broadcasts an invalidation message" }
+      ]
+    },
+    {
+      "id": "mesi-paraphrase",
+      "kind": "paraphrase",
+      "query": "How do neighboring processor caches learn to discard an outdated shared value after a write?",
+      "expected": [
+        { "passage_id": "mesi-invalidation", "evidence": "broadcasts an invalidation message" }
+      ]
+    },
+    {
+      "id": "mesi-writeback-question",
+      "kind": "natural_language_question",
+      "query": "Why must a modified MESI cache line be written back when it is evicted?",
+      "expected": [
+        {
+          "passage_id": "mesi-writeback",
+          "evidence": "write the modified line back to main memory before eviction"
+        }
+      ]
+    },
+    {
+      "id": "raft-exact-rpc",
+      "kind": "exact_algorithm_term",
+      "query": "Raft AppendEntries RPC majority commit index",
+      "expected": [
+        {
+          "passage_id": "raft-commit",
+          "evidence": "commits an entry after a majority of servers have replicated it"
+        }
+      ]
+    },
+    {
+      "id": "raft-multi-passage",
+      "kind": "multi_passage_question",
+      "query": "How does Raft elect a leader and later decide a log entry is committed?",
+      "expected": [
+        { "passage_id": "raft-election", "evidence": "needs votes from a majority of the cluster" },
+        {
+          "passage_id": "raft-commit",
+          "evidence": "commits an entry after a majority of servers have replicated it"
+        }
+      ]
+    },
+    {
+      "id": "protocol-timeouts-broad",
+      "kind": "broad_underspecified",
+      "query": "What do protocol timeouts do?",
+      "expected": [
+        { "passage_id": "raft-election", "evidence": "randomized election timeout expires" },
+        { "passage_id": "tcp-retransmission-timeout", "evidence": "retransmission timeout expires" }
+      ]
+    },
+    {
+      "id": "huffman-canonical",
+      "kind": "exact_algorithm_term",
+      "query": "canonical Huffman coding prefix-free code symbol lengths",
+      "expected": [
+        {
+          "passage_id": "huffman-canonical",
+          "evidence": "assigns codes from code lengths and symbol order"
+        }
+      ]
+    },
+    {
+      "id": "dijkstra-negative-edges",
+      "kind": "paraphrase_question",
+      "query": "Why can Dijkstra's shortest path method fail when an edge has a negative cost?",
+      "expected": [
+        {
+          "passage_id": "dijkstra-negative-edges",
+          "evidence": "requires all edge weights to be nonnegative"
+        }
+      ]
+    },
+    {
+      "id": "paxos-not-covered",
+      "kind": "related_not_covered",
+      "query": "How does Paxos use prepare and accept quorums to choose a value?",
+      "expected": [],
+      "must_be_absent": ["Paxos", "prepare phase", "accept phase"]
+    },
+    {
+      "id": "directory-coherence-not-covered",
+      "kind": "related_not_covered",
+      "query": "How does directory-based cache coherence track sharers?",
+      "expected": [],
+      "must_be_absent": ["directory-based coherence", "sharer directory"]
+    },
+    {
+      "id": "raft-snapshots-not-covered",
+      "kind": "related_not_covered",
+      "query": "How does Raft install snapshots to compact its old log?",
+      "expected": [],
+      "must_be_absent": ["snapshot", "log compaction"]
+    },
+    {
+      "id": "photosynthesis-unrelated",
+      "kind": "unrelated_negative",
+      "query": "How does chlorophyll use photosynthesis to produce glucose from sunlight?",
+      "expected": [],
+      "must_be_absent": ["chlorophyll", "photosynthesis", "glucose"]
+    },
+    {
+      "id": "mesi-exclusive-state",
+      "kind": "exact_term_question",
+      "query": "After MESI invalidates other caches for a shared-line write, which cache keeps the exclusive valid copy?",
+      "expected": [
+        {
+          "passage_id": "mesi-exclusive-after-invalidation",
+          "evidence": "The writing cache then holds the exclusive valid copy"
+        }
+      ]
+    },
+    {
+      "id": "mesi-modified-state",
+      "kind": "paraphrase_question",
+      "query": "What state does a MESI line enter after its owner writes to it?",
+      "expected": [
+        {
+          "passage_id": "mesi-modified-after-write",
+          "evidence": "The line is marked Modified after the write"
+        }
+      ]
+    },
+    {
+      "id": "bloom-exact",
+      "kind": "exact_algorithm_term",
+      "query": "Bloom filter bit array hash functions false positive",
+      "expected": [
+        {
+          "passage_id": "bloom-membership",
+          "evidence": "a query with all bits set may be a false positive"
+        }
+      ]
+    },
+    {
+      "id": "bloom-membership-paraphrase",
+      "kind": "paraphrase_question",
+      "query": "Why can a probabilistic set-membership check say an absent item might be present?",
+      "expected": [
+        {
+          "passage_id": "bloom-membership",
+          "evidence": "a query with all bits set may be a false positive"
+        }
+      ]
+    },
+    {
+      "id": "bloom-sizing-question",
+      "kind": "natural_language_question",
+      "query": "How do the bit count, inserted item count, and number of hashes affect a Bloom filter's false-positive probability?",
+      "expected": [
+        {
+          "passage_id": "bloom-sizing",
+          "evidence": "the approximate false-positive probability is (1 - exp(-k*n/m))^k"
+        }
+      ]
+    },
+    {
+      "id": "btree-exact",
+      "kind": "exact_technical_term",
+      "query": "B-tree separator keys internal nodes child interval lookup",
+      "expected": [
+        {
+          "passage_id": "btree-search",
+          "evidence": "separator keys in internal nodes to choose the child interval"
+        }
+      ]
+    },
+    {
+      "id": "btree-range-paraphrase",
+      "kind": "paraphrase_question",
+      "query": "After finding the first indexed key in an ordered range, how does a B+ tree visit the next records efficiently?",
+      "expected": [
+        {
+          "passage_id": "btree-leaf-scan",
+          "evidence": "a scan follows those leaf links"
+        }
+      ]
+    },
+    {
+      "id": "tls-forward-secrecy",
+      "kind": "exact_protocol_term",
+      "query": "TLS 1.3 ephemeral Diffie-Hellman forward secrecy",
+      "expected": [
+        {
+          "passage_id": "tls-key-agreement",
+          "evidence": "ephemeral Diffie-Hellman key shares to derive a shared secret"
+        }
+      ]
+    },
+    {
+      "id": "tls-finished-paraphrase",
+      "kind": "paraphrase_question",
+      "query": "How does the TLS peer detect if handshake messages were altered in transit?",
+      "expected": [
+        {
+          "passage_id": "tls-finished",
+          "evidence": "verify_data derived from the handshake traffic secret and transcript hash"
+        }
+      ]
+    },
+    {
+      "id": "tls-multi-passage",
+      "kind": "multi_passage_question",
+      "query": "How does TLS 1.3 derive a shared secret and verify that both peers saw the same handshake?",
+      "expected": [
+        {
+          "passage_id": "tls-key-agreement",
+          "evidence": "ephemeral Diffie-Hellman key shares to derive a shared secret"
+        },
+        {
+          "passage_id": "tls-finished",
+          "evidence": "verify_data derived from the handshake traffic secret and transcript hash"
+        }
+      ]
+    },
+    {
+      "id": "quicksort-worst-case",
+      "kind": "exact_algorithm_term",
+      "query": "quicksort pivot highly unbalanced partitions quadratic worst case",
+      "expected": [
+        {
+          "passage_id": "quicksort-partition",
+          "evidence": "Highly unbalanced partitions can produce quadratic worst-case running time"
+        }
+      ]
+    },
+    {
+      "id": "quicksort-randomized-paraphrase",
+      "kind": "paraphrase_question",
+      "query": "What average complexity does choosing a random pivot give quicksort?",
+      "expected": [
+        {
+          "passage_id": "quicksort-randomized",
+          "evidence": "Its expected running time is O(n log n)"
+        }
+      ]
+    },
+    {
+      "id": "indexes-broad",
+      "kind": "broad_question",
+      "query": "How do tree indexes narrow a search and then scan a key range?",
+      "expected": [
+        {
+          "passage_id": "btree-search",
+          "evidence": "Each descent narrows the key range"
+        },
+        {
+          "passage_id": "btree-leaf-scan",
+          "evidence": "a scan follows those leaf links"
+        }
+      ]
+    },
+    {
+      "id": "raft-paxos-mixed",
+      "kind": "related_not_covered",
+      "query": "How does Paxos use prepare and accept phases to elect a Raft leader by majority vote?",
+      "expected": [],
+      "must_be_absent": ["Paxos", "prepare phase", "accept phase"]
+    },
+    {
+      "id": "dijkstra-bellman-ford",
+      "kind": "related_not_covered",
+      "query": "How does Bellman-Ford relax every edge to handle negative shortest-path weights?",
+      "expected": [],
+      "must_be_absent": ["Bellman-Ford", "relax every edge"]
+    },
+    {
+      "id": "btree-lsm-compaction",
+      "kind": "related_not_covered",
+      "query": "How do LSM trees compact sorted runs during a range lookup?",
+      "expected": [],
+      "must_be_absent": ["LSM tree", "compact sorted runs"]
+    },
+    {
+      "id": "tls-static-rsa",
+      "kind": "related_not_covered",
+      "query": "How does TLS 1.3 use static RSA key exchange to derive its traffic secret?",
+      "expected": [],
+      "must_be_absent": ["static RSA", "RSA key exchange"]
+    },
+    {
+      "id": "bloom-deletion",
+      "kind": "related_not_covered",
+      "query": "How does a counting Bloom filter remove an inserted item with deletion counters?",
+      "expected": [],
+      "must_be_absent": ["counting Bloom filter", "deletion counters"]
+    },
+    {
+      "id": "quicksort-stability",
+      "kind": "related_not_covered",
+      "query": "How does quicksort preserve the original order of equal-key records in a stable sort?",
+      "expected": [],
+      "must_be_absent": ["stable sort", "equal-key records"]
+    },
+    {
+      "id": "tcp-handshake",
+      "kind": "related_not_covered",
+      "query": "How does the TCP three-way handshake exchange SYN and SYN-ACK before data transfer?",
+      "expected": [],
+      "must_be_absent": ["three-way handshake", "SYN-ACK"]
+    },
+    {
+      "id": "mesi-false-sharing",
+      "kind": "related_not_covered",
+      "query": "How does MESI eliminate false sharing between unrelated variables on one cache line?",
+      "expected": [],
+      "must_be_absent": ["false sharing", "unrelated variables"]
+    },
+    {
+      "id": "bloom-crc",
+      "kind": "related_not_covered",
+      "query": "Which CRC polynomial does the Bloom filter use for its hash functions?",
+      "expected": [],
+      "must_be_absent": ["CRC polynomial"]
+    },
+    {
+      "id": "rna-splicing-unrelated",
+      "kind": "unrelated_negative",
+      "query": "How does RNA splicing remove introns from a pre-mRNA transcript?",
+      "expected": [],
+      "must_be_absent": ["RNA splicing", "introns", "pre-mRNA"]
+    },
+    {
+      "id": "volcano-unrelated",
+      "kind": "unrelated_negative",
+      "query": "What causes a stratovolcano to erupt after magma chamber pressure rises?",
+      "expected": [],
+      "must_be_absent": ["stratovolcano", "magma chamber"]
+    },
+    {
+      "id": "shakespeare-unrelated",
+      "kind": "unrelated_negative",
+      "query": "What is the role of the witches in Shakespeare's Macbeth?",
+      "expected": [],
+      "must_be_absent": ["Shakespeare", "Macbeth", "witches"]
+    }
+  ]
+}

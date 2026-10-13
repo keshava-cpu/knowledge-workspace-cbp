@@ -1,0 +1,32 @@
+<svg width="800" height="420" viewBox="0 0 800 420" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="420" fill="#f8fafc"/>
+  <text x="400" y="38" text-anchor="middle" font-size="28" font-family="Segoe UI, Arial" font-weight="700" fill="#0f172a">Search Quality Snapshot</text>
+
+  <g transform="translate(80,60)">
+    <text x="0" y="280" font-size="16" font-family="Segoe UI, Arial" fill="#475569">Query type</text>
+    <text x="130" y="280" font-size="16" font-family="Segoe UI, Arial" fill="#475569">Positive</text>
+    <text x="280" y="280" font-size="16" font-family="Segoe UI, Arial" fill="#475569">Negative</text>
+
+    <line x1="0" y1="250" x2="420" y2="250" stroke="#94a3b8" stroke-width="2"/>
+    <line x1="0" y1="0" x2="0" y2="250" stroke="#94a3b8" stroke-width="2"/>
+
+    <rect x="110" y="120" width="60" height="130" fill="#2563eb" rx="8"/>
+    <rect x="260" y="220" width="60" height="30" fill="#f59e0b" rx="8"/>
+
+    <text x="140" y="110" font-size="16" font-family="Segoe UI, Arial" fill="#0f172a">0.25</text>
+    <text x="290" y="210" font-size="16" font-family="Segoe UI, Arial" fill="#0f172a">0.00</text>
+
+    <text x="50" y="130" font-size="16" font-family="Segoe UI, Arial" fill="#475569">P@5</text>
+    <text x="52" y="230" font-size="16" font-family="Segoe UI, Arial" fill="#475569">MRR</text>
+
+    <line x1="0" y1="170" x2="420" y2="170" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="0" y1="80" x2="420" y2="80" stroke="#e2e8f0" stroke-width="1"/>
+  </g>
+
+  <g transform="translate(520,80)">
+    <text x="0" y="0" font-size="20" font-family="Segoe UI, Arial" font-weight="700" fill="#0f172a">Key finding</text>
+    <text x="0" y="40" font-size="16" font-family="Segoe UI, Arial" fill="#334155">- Dedup fixed duplicate handling.</text>
+    <text x="0" y="72" font-size="16" font-family="Segoe UI, Arial" fill="#334155">- Relevance was unchanged.</text>
+    <text x="0" y="104" font-size="16" font-family="Segoe UI, Arial" fill="#334155">- False positives remained at 100%.</text>
+  </g>
+</svg>

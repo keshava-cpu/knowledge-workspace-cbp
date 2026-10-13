@@ -243,3 +243,36 @@ export async function monitorJob(
     await delay(1200, signal)
   }
 }
+
+export async function monitorDocumentIndexing(
+  documentId: string,
+  onUpdate: (document: DocumentDetail) => void,
+  signal?: AbortSignal,
+): Promise<DocumentDetail> {
+  let consecutiveErrors = 0
+  while (true) {
+    if (signal?.aborted) {
+      throw new DOMException('The request was aborted.', 'AbortError')
+    }
+    try {
+      const detail = await getDocument(documentId, signal)
+      consecutiveErrors = 0
+      onUpdate(detail)
+      if (detail.indexing_status === 'completed' || detail.indexing_status === 'failed') {
+        return detail
+      }
+      if (detail.status === 'failed' || detail.status === 'cancelled') {
+        return detail
+      }
+    } catch (err) {
+      if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) {
+        throw err
+      }
+      consecutiveErrors++
+      if (consecutiveErrors >= 5) {
+        throw err
+      }
+    }
+    await delay(1200, signal)
+  }
+}

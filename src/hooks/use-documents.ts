@@ -5,6 +5,7 @@ import {
   deleteDocument,
   getDocument,
   listDocuments,
+  monitorDocumentIndexing,
   monitorJob,
   uploadPdf,
   type DocumentDetail,
@@ -45,6 +46,50 @@ function updateDocumentStatus(
   )
 }
 
+async function followDocument(
+  document: DocumentSummary,
+  signal: AbortSignal,
+  setDocuments: Dispatch<SetStateAction<DocumentSummary[]>>,
+  setError: Dispatch<SetStateAction<string | null>>,
+) {
+  try {
+    let currentDoc = document
+
+    if (currentDoc.status === 'queued' || currentDoc.status === 'processing') {
+      const job = await monitorJob(
+        currentDoc.job_id,
+        (update) => updateDocumentStatus(setDocuments, currentDoc.id, update),
+        signal,
+      )
+      if (signal.aborted || job.status === 'failed' || job.status === 'cancelled') {
+        return
+      }
+      currentDoc = await getDocument(currentDoc.id, signal)
+      if (signal.aborted) return
+      setDocuments((current) => replaceDocument(current, currentDoc))
+    }
+
+    if (
+      currentDoc.status === 'completed' &&
+      (currentDoc.indexing_status === 'pending' || currentDoc.indexing_status === 'processing') &&
+      !signal.aborted
+    ) {
+      const detail = await monitorDocumentIndexing(
+        currentDoc.id,
+        (update) => setDocuments((current) => replaceDocument(current, update)),
+        signal,
+      )
+      if (!signal.aborted) {
+        setDocuments((current) => replaceDocument(current, detail))
+      }
+    }
+  } catch (docError) {
+    if (!signal.aborted) {
+      setError(`Could not refresh ${document.filename}: ${describeError(docError)}`)
+    }
+  }
+}
+
 export function useDocuments() {
   const [documents, setDocuments] = useState<DocumentSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -65,32 +110,19 @@ export function useDocuments() {
         setIsLoading(false)
 
         for (const document of loaded) {
-          if (document.status === 'queued' || document.status === 'processing') {
-            void followJob(document, controller.signal)
+          if (
+            document.status === 'queued' ||
+            document.status === 'processing' ||
+            (document.status === 'completed' &&
+              (document.indexing_status === 'pending' || document.indexing_status === 'processing'))
+          ) {
+            void followDocument(document, controller.signal, setDocuments, setError)
           }
         }
       } catch (loadError) {
         if (!controller.signal.aborted) {
           setError(describeError(loadError))
           setIsLoading(false)
-        }
-      }
-    }
-
-    async function followJob(document: DocumentSummary, signal: AbortSignal) {
-      try {
-        const job = await monitorJob(
-          document.job_id,
-          (update) => updateDocumentStatus(setDocuments, document.id, update),
-          signal,
-        )
-        if (job.status === 'completed' && !signal.aborted) {
-          const detail = await getDocument(document.id, signal)
-          setDocuments((current) => replaceDocument(current, detail))
-        }
-      } catch (jobError) {
-        if (!signal.aborted) {
-          setError(`Could not refresh ${document.filename}: ${describeError(jobError)}`)
         }
       }
     }
@@ -113,14 +145,10 @@ export function useDocuments() {
     try {
       const submitted: DocumentDetail = await uploadPdf(file, controller.signal)
       setDocuments((current) => replaceDocument(current, submitted))
-      const job = await monitorJob(
-        submitted.job_id,
-        (update) => updateDocumentStatus(setDocuments, submitted.id, update),
-        controller.signal,
-      )
-      if (job.status === 'completed') {
-        const detail = await getDocument(submitted.id, controller.signal)
-        setDocuments((current) => replaceDocument(current, detail))
+
+      const lifecycleSignal = lifecycleController.current?.signal
+      if (lifecycleSignal && !lifecycleSignal.aborted) {
+        void followDocument(submitted, lifecycleSignal, setDocuments, setError)
       }
     } catch (uploadError) {
       if (!controller.signal.aborted) {
