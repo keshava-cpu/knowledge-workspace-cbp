@@ -186,12 +186,21 @@ export function SearchPage() {
           <article key={result.chunk_id} className="py-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <Link
-                  to={`/documents/${encodeURIComponent(result.document_id)}?q=${encodeURIComponent(query.trim())}`}
-                  className="font-medium text-foreground underline-offset-4 hover:underline"
-                >
-                  {result.title}
-                </Link>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    to={`/reader/${encodeURIComponent(result.document_id)}?q=${encodeURIComponent(query.trim())}${result.page_numbers[0] ? `&page=${result.page_numbers[0]}` : ''}`}
+                    className="font-medium text-foreground underline-offset-4 hover:underline"
+                  >
+                    {result.title}
+                  </Link>
+                  <Link
+                    to={`/documents/${encodeURIComponent(result.document_id)}`}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                    title="View parsed text and metadata"
+                  >
+                    [parsed]
+                  </Link>
+                </div>
                 <p className="mt-1 break-all text-xs text-muted-foreground">{result.filename}</p>
               </div>
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 text-xs">

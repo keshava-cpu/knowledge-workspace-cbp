@@ -1,4 +1,14 @@
-import { ArrowUpRight, Clock3, FileText, Info, LoaderCircle, Trash2, XCircle } from 'lucide-react'
+import {
+  ArrowUpRight,
+  BookOpenText,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  Info,
+  LoaderCircle,
+  Trash2,
+  XCircle,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '../../components/ui/button'
@@ -55,6 +65,70 @@ function formatDuration(seconds: number | null): string {
   return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`
 }
 
+/**
+ * Map the current processing/indexing state to a human-readable ingestion stage.
+ * Stages (in order):
+ *   1. Uploading PDF
+ *   2. Extracting content (Docling)
+ *   3. Creating chunks
+ *   4. Generating embeddings
+ *   5. Persisting search index
+ *   6. Ready / Failed
+ */
+function describeIngestionStage(document: DocumentSummary): {
+  label: string
+  detail: string
+  isIndeterminate: boolean
+} {
+  if (document.status === 'queued') {
+    return {
+      label: 'Uploading PDF',
+      detail: 'Waiting for Docling Serve to accept the document.',
+      isIndeterminate: true,
+    }
+  }
+  if (document.status === 'processing') {
+    return {
+      label: 'Extracting content',
+      detail: 'Docling is parsing the PDF. This may take a minute for large files.',
+      isIndeterminate: true,
+    }
+  }
+  if (
+    document.status === 'completed' &&
+    (document.indexing_status === 'processing' || document.indexing_status === 'pending')
+  ) {
+    const chunks = document.indexed_chunks
+    return {
+      label: 'Generating embeddings',
+      detail:
+        chunks > 0
+          ? `${chunks} chunks embedded so far.`
+          : 'Creating chunks and generating embeddings.',
+      isIndeterminate: chunks === 0,
+    }
+  }
+  if (document.status === 'completed' && document.indexing_status === 'completed') {
+    return {
+      label: 'Ready',
+      detail: `${document.indexed_chunks} chunks indexed and searchable.`,
+      isIndeterminate: false,
+    }
+  }
+  if (document.status === 'completed' && document.indexing_status === 'failed') {
+    return {
+      label: 'Indexing failed',
+      detail: document.indexing_error ?? 'Search indexing failed. Use backfill to retry.',
+      isIndeterminate: false,
+    }
+  }
+  return {
+    label: statusLabels[document.status],
+    detail: '',
+    isIndeterminate: false,
+  }
+}
+
 interface DocumentCardProps {
   document: DocumentSummary
   onCancel: (document: DocumentSummary) => Promise<void>
@@ -63,16 +137,20 @@ interface DocumentCardProps {
 
 export function DocumentCard({ document, onCancel, onDelete }: DocumentCardProps) {
   const isActive = document.status === 'queued' || document.status === 'processing'
+  const isIndexing =
+    document.status === 'completed' &&
+    (document.indexing_status === 'processing' || document.indexing_status === 'pending')
+  const showProgress = isActive || isIndexing
   const [isBusy, setIsBusy] = useState(false)
   const [showMetadata, setShowMetadata] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [now, setNow] = useState(0)
 
   useEffect(() => {
-    if (!isActive) return
+    if (!showProgress) return
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
-  }, [isActive])
+  }, [showProgress])
 
   const elapsedSeconds = Math.max(0, Math.floor((now - Date.parse(document.created_at)) / 1000))
   const elapsed = `${Math.floor(elapsedSeconds / 60)}m ${String(elapsedSeconds % 60).padStart(2, '0')}s`
@@ -86,6 +164,8 @@ export function DocumentCard({ document, onCancel, onDelete }: DocumentCardProps
     }
   }
 
+  const stage = describeIngestionStage(document)
+
   return (
     <Card className="border-white/10 bg-[#10151c] py-0 transition-colors hover:border-indigo-400/35">
       <CardHeader className="p-4 pb-0">
@@ -94,10 +174,17 @@ export function DocumentCard({ document, onCancel, onDelete }: DocumentCardProps
             <FileText className="h-4 w-4" />
           </div>
           <span
-            className={`inline-flex items-center gap-1.5 border px-2 py-1 text-[10px] font-medium uppercase tracking-[0.16em] ${statusStyles[document.status]}`}
+            className={`inline-flex items-center gap-1.5 border px-2 py-1 text-[10px] font-medium uppercase tracking-[0.16em] ${
+              isIndexing
+                ? 'border-amber-400/30 bg-amber-400/10 text-amber-200'
+                : statusStyles[document.status]
+            }`}
           >
-            {isActive && <LoaderCircle className="h-3 w-3 animate-spin" />}
-            {statusLabels[document.status]}
+            {(isActive || isIndexing) && <LoaderCircle className="h-3 w-3 animate-spin" />}
+            {document.status === 'completed' && document.indexing_status === 'completed' && (
+              <CheckCircle2 className="h-3 w-3 text-emerald-400" aria-hidden="true" />
+            )}
+            {isIndexing ? 'Indexing' : statusLabels[document.status]}
           </span>
         </div>
 
@@ -121,36 +208,50 @@ export function DocumentCard({ document, onCancel, onDelete }: DocumentCardProps
           </p>
         )}
 
-        {isActive && (
+        {showProgress && (
           <div className="mt-4 border border-amber-400/15 bg-amber-400/[0.04] p-3">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-100/80">
               <span className="inline-flex items-center gap-2">
                 <Clock3 className="h-3.5 w-3.5" />
-                Parsing for {elapsed}
+                {stage.label}
               </span>
-              <span>Page count pending</span>
+              {isActive && <span>Processing for {elapsed}</span>}
+              {isIndexing && document.indexed_chunks > 0 && (
+                <span>{document.indexed_chunks} chunks indexed</span>
+              )}
             </div>
             <Progress
-              value={35}
+              value={stage.isIndeterminate ? 35 : undefined}
               className="h-1 bg-white/10 [&>div]:animate-[progress_1.6s_ease-in-out_infinite] [&>div]:bg-amber-300"
-              aria-label="Parsing in progress"
+              aria-label={stage.label}
             />
-            <p className="mt-2 text-[11px] leading-4 text-zinc-500">
-              Docling reports completion only; it does not expose page-level progress.
-            </p>
+            {stage.detail && (
+              <p className="mt-2 text-[11px] leading-4 text-zinc-500">{stage.detail}</p>
+            )}
           </div>
+        )}
+
+        {document.indexing_status === 'failed' && !showProgress && (
+          <p
+            role="alert"
+            className="mt-3 border-l-2 border-amber-400/50 pl-3 text-sm text-amber-200"
+          >
+            {document.indexing_error ?? 'Search indexing failed.'}
+          </p>
         )}
       </CardContent>
 
       <CardFooter className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/5 p-4">
         <span className="min-w-0 flex-1 break-words text-xs text-zinc-500">
-          {document.status === 'completed'
-            ? 'Extracted text available'
+          {document.status === 'completed' && document.indexing_status === 'completed'
+            ? `${document.indexed_chunks} chunks · searchable`
             : document.status === 'failed'
               ? 'Conversion did not complete'
               : document.status === 'cancelled'
-                ? 'Parsing stopped; no partial checkpoint was returned'
-                : 'Waiting for Docling Serve'}
+                ? 'Parsing stopped'
+                : isIndexing
+                  ? 'Indexing…'
+                  : 'Waiting for Docling Serve'}
         </span>
         <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1">
           {isActive && (
@@ -167,13 +268,24 @@ export function DocumentCard({ document, onCancel, onDelete }: DocumentCardProps
             </Button>
           )}
           {document.status === 'completed' && (
-            <Link
-              to={`/documents/${encodeURIComponent(document.id)}`}
-              className="inline-flex items-center gap-2 py-1 text-sm text-indigo-300 hover:text-indigo-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-indigo-300"
-            >
-              View text
-              <ArrowUpRight className="h-4 w-4" />
-            </Link>
+            <div className="flex items-center gap-2.5">
+              <Link
+                to={`/reader/${encodeURIComponent(document.id)}`}
+                className="inline-flex items-center gap-1.5 py-1 text-sm font-medium text-emerald-400 hover:text-emerald-300 focus-visible:outline focus-visible:outline-1 focus-visible:outline-emerald-400"
+                title="Open in PDF Reader"
+              >
+                <BookOpenText className="h-4 w-4" />
+                Reader
+              </Link>
+              <Link
+                to={`/documents/${encodeURIComponent(document.id)}`}
+                className="inline-flex items-center gap-1.5 py-1 text-sm text-indigo-300 hover:text-indigo-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-indigo-300"
+                title="View parsed text"
+              >
+                Open
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
           )}
           <TooltipProvider>
             <Tooltip>
@@ -228,8 +340,12 @@ export function DocumentCard({ document, onCancel, onDelete }: DocumentCardProps
             </dd>
             <dt>Added</dt>
             <dd className="text-right text-zinc-200">{formatDate(document.created_at)}</dd>
-            <dt>Status</dt>
+            <dt>Job status</dt>
             <dd className="text-right text-zinc-200">{statusLabels[document.status]}</dd>
+            <dt>Indexing</dt>
+            <dd className="text-right text-zinc-200 capitalize">{document.indexing_status}</dd>
+            <dt>Indexed chunks</dt>
+            <dd className="text-right text-zinc-200">{document.indexed_chunks}</dd>
           </dl>
         </DialogContent>
       </Dialog>

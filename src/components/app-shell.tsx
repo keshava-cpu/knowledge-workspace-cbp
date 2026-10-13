@@ -1,21 +1,21 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { Bell, FileText, Search } from 'lucide-react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router'
 import { Button } from '../../components/ui/button'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '../../components/ui/sidebar'
 import { AppSidebar } from '../../components/app-sidebar'
 import { useAuth } from '../auth/auth-context'
+import { GlobalSearchDialog } from './global-search-dialog'
 import { LibraryPage } from './library-page'
 import { NotesPage } from './notes-page'
 import { ProtectedRoute } from './protected-route'
-import { ReaderPage } from './reader-page'
 import { SearchPage } from './search-page'
 import { SettingsPage } from './settings-page'
 import { NotFoundPage, UnauthorizedPage } from './status-pages'
 
 const pageTitles: Record<string, string> = {
   '/': 'Library',
-  '/reader': 'Reader',
+  '/reader': 'PDF Reader',
   '/search': 'Global search',
   '/notes': 'Notes',
   '/login': 'Account',
@@ -27,32 +27,43 @@ const DocumentReaderPage = lazy(() =>
   import('./document-reader-page').then((module) => ({ default: module.DocumentReaderPage })),
 )
 
+const ReaderPage = lazy(() =>
+  import('./reader-page').then((module) => ({ default: module.ReaderPage })),
+)
+
 export function AppShell() {
   const [signOutError, setSignOutError] = useState('')
-  const [globalQuery, setGlobalQuery] = useState('')
-  const globalSearchRef = useRef<HTMLInputElement>(null)
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false)
   const { user, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const activeTitle = location.pathname.startsWith('/documents/')
-    ? 'Document'
-    : (pageTitles[location.pathname] ??
-      (location.pathname === '/auth/callback'
-        ? 'Account'
-        : location.pathname === '/unauthorized'
-          ? 'Access required'
-          : 'Page not found'))
+  const activeTitle = location.pathname.startsWith('/reader')
+    ? 'PDF Reader'
+    : location.pathname.startsWith('/documents/')
+      ? 'Parsed document'
+      : (pageTitles[location.pathname] ??
+        (location.pathname === '/auth/callback'
+          ? 'Account'
+          : location.pathname === '/unauthorized'
+            ? 'Access required'
+            : 'Page not found'))
 
+  const openSearch = useCallback(() => setSearchDialogOpen(true), [])
+  const closeSearch = useCallback(() => setSearchDialogOpen(false), [])
+
+  // Ctrl+K (or Cmd+K on macOS) → open global search dialog.
+  // Ctrl+F while reader is active → focus document search (handled by reader).
   useEffect(() => {
-    function focusGlobalSearch(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    function onKeyDown(event: KeyboardEvent) {
+      const mod = event.ctrlKey || event.metaKey
+      if (mod && event.key.toLowerCase() === 'k') {
         event.preventDefault()
-        globalSearchRef.current?.focus()
+        openSearch()
       }
     }
-    window.addEventListener('keydown', focusGlobalSearch)
-    return () => window.removeEventListener('keydown', focusGlobalSearch)
-  }, [])
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [openSearch])
 
   async function handleSignOut() {
     setSignOutError('')
@@ -79,28 +90,21 @@ export function AppShell() {
             </div>
           </div>
 
+          {/* Search trigger — opens the global search dialog */}
           <div className="hidden min-w-0 flex-1 items-center justify-center px-4 md:flex">
-            <label className="flex w-full max-w-xl items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-              <Search className="size-4" />
-              <input
-                ref={globalSearchRef}
-                type="text"
-                name="workspace-search"
-                value={globalQuery}
-                onChange={(event) => setGlobalQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter')
-                    navigate(`/search?q=${encodeURIComponent(globalQuery)}`)
-                }}
-                aria-label="Global search"
-                autoComplete="off"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="Search concepts, books, or passages"
-                className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-              />
-            </label>
+            <button
+              type="button"
+              id="global-search-trigger"
+              onClick={openSearch}
+              aria-label="Open global search (Ctrl+K)"
+              className="flex w-full max-w-xl items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-indigo-400/50 hover:bg-muted/30"
+            >
+              <Search className="size-4 shrink-0" aria-hidden="true" />
+              <span className="flex-1 text-left">Search concepts, books, or passages</span>
+              <kbd className="hidden rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] lg:inline">
+                Ctrl K
+              </kbd>
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -138,14 +142,6 @@ export function AppShell() {
                 }
               />
               <Route
-                path="/reader"
-                element={
-                  <ProtectedRoute>
-                    <ReaderPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/search"
                 element={
                   <ProtectedRoute>
@@ -158,6 +154,38 @@ export function AppShell() {
                 element={
                   <ProtectedRoute>
                     <NotesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reader"
+                element={
+                  <ProtectedRoute>
+                    <Suspense
+                      fallback={
+                        <div className="p-8 text-sm text-muted-foreground" role="status">
+                          Opening PDF reader...
+                        </div>
+                      }
+                    >
+                      <ReaderPage />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reader/:documentId"
+                element={
+                  <ProtectedRoute>
+                    <Suspense
+                      fallback={
+                        <div className="p-8 text-sm text-muted-foreground" role="status">
+                          Opening PDF reader...
+                        </div>
+                      }
+                    >
+                      <ReaderPage />
+                    </Suspense>
                   </ProtectedRoute>
                 }
               />
@@ -191,6 +219,9 @@ export function AppShell() {
           </div>
         </main>
       </SidebarInset>
+
+      {/* Global search dialog — rendered at the root so it overlays everything */}
+      <GlobalSearchDialog open={searchDialogOpen} onClose={closeSearch} />
     </SidebarProvider>
   )
 }

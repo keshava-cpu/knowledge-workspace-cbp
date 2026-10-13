@@ -22,9 +22,24 @@ class Settings:
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     embedding_max_tokens: int = 256
     embedding_batch_size: int = 32
+    # ── Optional FreeLLMAPI gateway ──────────────────────────────────────────
+    # Run your local gateway at http://127.0.0.1:3001 (or another host).
+    # Never expose these values in VITE_* env vars or the frontend bundle.
+    # The gateway is NOT reachable from a separately-hosted backend via
+    # localhost — document this limitation clearly to avoid confusion.
+    freellmapi_base_url: str | None = None
+    freellmapi_api_key: str | None = None
+    freellmapi_chat_model: str = "gpt-4o-mini"
+    freellmapi_enabled: bool = False
+    # ── Optional external GPU providers (disabled by default) ────────────────
+    huggingface_space_url: str | None = None
+    huggingface_api_key: str | None = None
+    lightning_ai_api_key: str | None = None
+    lightning_ai_endpoint: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
+        freellmapi_base_url = os.getenv("FREELLMAPI_BASE_URL", "").strip() or None
         return cls(
             docling_serve_url=os.getenv(
                 "DOCLING_SERVE_URL", "http://127.0.0.1:5001"
@@ -51,4 +66,13 @@ class Settings:
             ),
             embedding_max_tokens=int(os.getenv("EMBEDDING_MAX_TOKENS", "256")),
             embedding_batch_size=int(os.getenv("EMBEDDING_BATCH_SIZE", "32")),
+            freellmapi_base_url=freellmapi_base_url,
+            freellmapi_api_key=os.getenv("FREELLMAPI_API_KEY") or None,
+            freellmapi_chat_model=os.getenv("FREELLMAPI_CHAT_MODEL", "gpt-4o-mini"),
+            freellmapi_enabled=bool(freellmapi_base_url)
+            and os.getenv("FREELLMAPI_ENABLED", "false").lower() in {"1", "true", "yes", "on"},
+            huggingface_space_url=os.getenv("HF_SPACE_URL") or None,
+            huggingface_api_key=os.getenv("HF_API_KEY") or None,
+            lightning_ai_api_key=os.getenv("LIGHTNING_AI_API_KEY") or None,
+            lightning_ai_endpoint=os.getenv("LIGHTNING_AI_ENDPOINT") or None,
         )

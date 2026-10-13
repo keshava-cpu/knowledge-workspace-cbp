@@ -1,6 +1,17 @@
 import { useRef, useState } from 'react'
-import { FileUp, UploadCloud } from 'lucide-react'
+import { AlertCircle, FileUp, UploadCloud } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+
+// Must match MAX_UPLOAD_BYTES in backend/app/config.py (default 50 MiB).
+// The Supabase Free plan also enforces a 50 MB per-file storage limit.
+// Raising this beyond 50 MB requires a storage plan upgrade or a different
+// storage backend — do not silently change this constant without updating
+// both the backend env var and your storage configuration.
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024 // 50 MiB
+
+function formatMaxSize(bytes: number): string {
+  return `${Math.round(bytes / (1024 * 1024))} MB`
+}
 
 interface PdfDropzoneProps {
   disabled: boolean
@@ -9,11 +20,28 @@ interface PdfDropzoneProps {
 
 export function PdfDropzone({ disabled, onFile }: PdfDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false)
+  const [validationError, setValidationError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  function chooseFile(file?: File) {
-    if (file) onFile(file)
+  function validateAndSubmit(file?: File) {
     if (inputRef.current) inputRef.current.value = ''
+    if (!file) return
+    setValidationError('')
+
+    if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+      setValidationError('Only PDF files are supported.')
+      return
+    }
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setValidationError(
+        `This PDF is ${(file.size / (1024 * 1024)).toFixed(1)} MB, which exceeds the ${formatMaxSize(MAX_UPLOAD_BYTES)} limit. ` +
+          'To upload larger PDFs, upgrade your storage plan or adjust MAX_UPLOAD_BYTES in the backend configuration.',
+      )
+      return
+    }
+
+    onFile(file)
   }
 
   return (
@@ -24,7 +52,7 @@ export function PdfDropzone({ disabled, onFile }: PdfDropzoneProps) {
         accept="application/pdf,.pdf"
         className="sr-only"
         aria-label="Choose a PDF to upload"
-        onChange={(event) => chooseFile(event.currentTarget.files?.[0])}
+        onChange={(event) => validateAndSubmit(event.currentTarget.files?.[0])}
       />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
@@ -34,20 +62,32 @@ export function PdfDropzone({ disabled, onFile }: PdfDropzoneProps) {
           <div>
             <p className="font-medium text-zinc-100">Add a PDF to your workspace</p>
             <p className="text-sm text-zinc-400">
-              PDF files only. The server enforces the configured size limit.
+              PDF files only — maximum {formatMaxSize(MAX_UPLOAD_BYTES)}. The server also enforces
+              this limit.
             </p>
           </div>
         </div>
         <Button
           type="button"
           disabled={disabled}
-          onClick={() => inputRef.current?.click()}
+          onClick={() => {
+            setValidationError('')
+            inputRef.current?.click()
+          }}
           className="gap-2 bg-indigo-500 text-white hover:bg-indigo-400"
         >
           <UploadCloud className="h-4 w-4" />
-          {disabled ? 'Processing PDF' : 'Choose PDF'}
+          {disabled ? 'Uploading PDF' : 'Choose PDF'}
         </Button>
       </div>
+
+      {validationError && (
+        <p role="alert" className="mb-3 flex items-start gap-2 text-sm text-rose-300">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          {validationError}
+        </p>
+      )}
+
       <div
         role="region"
         aria-label="PDF drop zone"
@@ -62,7 +102,7 @@ export function PdfDropzone({ disabled, onFile }: PdfDropzoneProps) {
         onDrop={(event) => {
           event.preventDefault()
           setIsDragging(false)
-          if (!disabled) chooseFile(event.dataTransfer.files[0])
+          if (!disabled) validateAndSubmit(event.dataTransfer.files[0])
         }}
         className={`flex min-h-20 items-center justify-center border px-4 py-5 text-center text-sm transition-colors ${
           isDragging

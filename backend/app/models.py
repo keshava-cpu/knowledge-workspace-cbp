@@ -59,6 +59,7 @@ class SearchResult(BaseModel):
     page_numbers: list[int]
     location_metadata: list[dict[str, Any]]
     score: float
+    semantic_similarity: float | None = None
     semantic_rank: int | None = None
     lexical_rank: int | None = None
     retrieval_methods: list[str]
